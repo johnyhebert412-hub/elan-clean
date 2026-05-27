@@ -1,10 +1,20 @@
-# Historique Élan
+# Historique Elan
 
-## v0.5.2 - 2026-05-26
+## v0.4.5 - 2026-05-27
 
-- Système de version, historique et ZIP automatique ajoutés.
+- Libellé de l accueil calculé selon l heure locale.
 
-## v0.5.1 - 2026-05-26
+## v0.4.4 - 2026-05-27
 
-- Ajout rapide depuis l'accueil.
-- Paramètres et notifications prêts pour le test.
+- Timer actif simplifié pour mobile.
+
+## v0.4.3 - 2026-05-26
+
+- Chargement Vercel securise et publication validee.
+
+## v0.4.2 - 2026-05-26
+
+- Navigation Domaines et mode Travail corrigés.
+- Coach adaptatif et notifications simplifiées.
+- Déploiement GitHub et Vercel préparé.
+

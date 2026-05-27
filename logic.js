@@ -179,6 +179,13 @@ export function todayKey(date = new Date()) {
   return local.toISOString().slice(0, 10);
 }
 
+export function greetingForLocalTime(date = new Date()) {
+  const hour = date.getHours();
+  if (hour < 12) return "Bonjour";
+  if (hour < 18) return "Cet après-midi";
+  return "Ce soir";
+}
+
 export function emptyState() {
   return {
     days: {},

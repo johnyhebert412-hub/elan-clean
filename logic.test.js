@@ -16,10 +16,17 @@ import {
   addRewardTime,
   useRewardTime,
   shouldSendNotification,
+  greetingForLocalTime,
   coinsLastSevenDays,
   spendCoins,
   buyObjectiveSlot
 } from "./logic.js";
+
+test("the home greeting follows local time only", () => {
+  assert.equal(greetingForLocalTime(new Date(2026, 4, 27, 8, 0)), "Bonjour");
+  assert.equal(greetingForLocalTime(new Date(2026, 4, 27, 14, 0)), "Cet après-midi");
+  assert.equal(greetingForLocalTime(new Date(2026, 4, 27, 20, 0)), "Ce soir");
+});
 
 test("the opening screen contains useful daily domains including health", () => {
   assert.deepEqual(Object.keys(dayTypes), [

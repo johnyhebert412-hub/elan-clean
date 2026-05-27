@@ -1,23 +1,38 @@
 {
-  "version": "v0.5.2",
-  "updated": "2026-05-26",
+  "version": "v0.4.5",
+  "updated": "2026-05-27",
   "changes": [
-    "Système de version, historique et ZIP automatique ajoutés."
+    "Libellé de l accueil calculé selon l heure locale."
   ],
   "history": [
     {
-      "version": "v0.5.2",
-      "date": "2026-05-26",
+      "version": "v0.4.5",
+      "date": "2026-05-27",
       "changes": [
-        "Système de version, historique et ZIP automatique ajoutés."
+        "Libellé de l accueil calculé selon l heure locale."
       ]
     },
     {
-      "version": "v0.5.1",
+      "version": "v0.4.4",
+      "date": "2026-05-27",
+      "changes": [
+        "Timer actif simplifié pour mobile."
+      ]
+    },
+    {
+      "version": "v0.4.3",
       "date": "2026-05-26",
       "changes": [
-        "Ajout rapide depuis l'accueil.",
-        "Paramètres et notifications prêts pour le test."
+        "Chargement Vercel securise et publication validee."
+      ]
+    },
+    {
+      "version": "v0.4.2",
+      "date": "2026-05-26",
+      "changes": [
+        "Navigation Domaines et mode Travail corrigés.",
+        "Coach adaptatif et notifications simplifiées.",
+        "Déploiement GitHub et Vercel préparé."
       ]
     }
   ]
