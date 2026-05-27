@@ -306,6 +306,28 @@ input[type="time"], select {
 
 .version-card p { margin: 7px 0; }
 
+.version-line {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.version-heading {
+  margin-top: 14px !important;
+}
+
+.version-changes {
+  color: var(--muted);
+  font-size: 0.9rem;
+  line-height: 1.4;
+  margin: 5px 0 0;
+  padding-left: 19px;
+}
+
+.version-changes li + li {
+  margin-top: 4px;
+}
+
 .danger-button {
   background: transparent;
   border-color: #e5c2bd;

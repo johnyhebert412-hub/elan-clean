@@ -1,10 +1,13 @@
 {
   "name": "elan-propre-mobile",
   "private": true,
-  "version": "0.5.1",
+  "version": "0.5.2",
   "scripts": {
     "build": "node scripts/build.mjs",
     "check": "node --check app.js",
-    "release:patch": "node scripts/version.mjs patch"
+    "release:patch": "node scripts/version.mjs patch",
+    "release:minor": "node scripts/version.mjs minor",
+    "release:major": "node scripts/version.mjs major",
+    "zip": "powershell -ExecutionPolicy Bypass -File scripts/package-release.ps1"
   }
 }

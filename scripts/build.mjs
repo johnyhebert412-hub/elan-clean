@@ -8,6 +8,7 @@ const requiredFiles = [
   "index.html",
   "styles.css",
   "app.js",
+  "version.json",
   "manifest.webmanifest",
   "sw.js",
   "vercel.json"
@@ -42,6 +43,18 @@ async function validateEntry() {
   }
 }
 
+async function validateVersion() {
+  const release = JSON.parse(await readFile(path.join(root, "version.json"), "utf8"));
+  const packageData = JSON.parse(await readFile(path.join(root, "package.json"), "utf8"));
+  const expected = `v${packageData.version}`;
+  if (release.version !== expected) {
+    throw new Error("La version affichée doit correspondre à package.json.");
+  }
+  if (!Array.isArray(release.history) || release.history.length === 0) {
+    throw new Error("L'historique de version est absent.");
+  }
+}
+
 async function build() {
   for (const file of requiredFiles) {
     if (!existsSync(path.join(root, file))) {
@@ -50,7 +63,9 @@ async function build() {
   }
   await ensureIcons();
   await validateEntry();
-  console.log("Élan v0.5.1 vérifié. Projet prêt pour Vercel.");
+  await validateVersion();
+  const release = JSON.parse(await readFile(path.join(root, "version.json"), "utf8"));
+  console.log(`Élan ${release.version} vérifié. Projet prêt pour Vercel.`);
 }
 
 try {

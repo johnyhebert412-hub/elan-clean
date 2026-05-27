@@ -211,6 +211,24 @@
     $("notification-status").textContent = notificationPermissionText();
   }
 
+  async function renderVersionInfo() {
+    if (!location.protocol.startsWith("http")) return;
+    try {
+      const response = await fetch("./version.json", { cache: "no-store" });
+      if (!response.ok) return;
+      const release = await response.json();
+      $("app-version").textContent = `Version : ${release.version}`;
+      $("app-updated").textContent = `Dernière mise à jour : ${release.updated}`;
+      $("app-changes").replaceChildren(...release.changes.map((change) => {
+        const item = document.createElement("li");
+        item.textContent = change;
+        return item;
+      }));
+    } catch (error) {
+      // The embedded summary remains visible when opened as a local file.
+    }
+  }
+
   async function requestNotifications() {
     if (!("Notification" in window)) {
       showToast("Notifications non disponibles ici.");
@@ -332,6 +350,7 @@
     renderQuickItems();
     renderWork();
     renderSettings();
+    renderVersionInfo();
   }
 
   bindEvents();

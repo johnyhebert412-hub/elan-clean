@@ -1,9 +1,10 @@
-const CACHE_NAME = "elan-clean-v0.5.1-add";
+const CACHE_NAME = "elan-clean-v0.5.2";
 const FILES = [
   "./",
   "./index.html",
   "./styles.css",
   "./app.js",
+  "./version.json",
   "./manifest.webmanifest",
   "./icons/icon-192.png",
   "./icons/icon-512.png",

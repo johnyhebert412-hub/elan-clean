@@ -1,0 +1,24 @@
+{
+  "version": "v0.5.2",
+  "updated": "2026-05-26",
+  "changes": [
+    "Système de version, historique et ZIP automatique ajoutés."
+  ],
+  "history": [
+    {
+      "version": "v0.5.2",
+      "date": "2026-05-26",
+      "changes": [
+        "Système de version, historique et ZIP automatique ajoutés."
+      ]
+    },
+    {
+      "version": "v0.5.1",
+      "date": "2026-05-26",
+      "changes": [
+        "Ajout rapide depuis l'accueil.",
+        "Paramètres et notifications prêts pour le test."
+      ]
+    }
+  ]
+}
