@@ -1,9 +1,10 @@
 {
-  "name": "elan-pilote",
+  "name": "elan-propre-mobile",
   "private": true,
-  "type": "module",
+  "version": "0.5.1",
   "scripts": {
     "build": "node scripts/build.mjs",
-    "test": "node --test"
+    "check": "node --check app.js",
+    "release:patch": "node scripts/version.mjs patch"
   }
 }
