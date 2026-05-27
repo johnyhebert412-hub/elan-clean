@@ -17,6 +17,7 @@ const files = [
 
 async function verifyEntryPage() {
   const html = await readFile(path.join(root, "index.html"), "utf8");
+  const release = JSON.parse(await readFile(path.join(root, "version.json"), "utf8"));
   const moduleEntry = /<script\s+type="module"\s+src="app\.js"\s*><\/script>/;
   const javascriptInBody = /\b(?:import\s+\{|const\s+state\s*=|function\s+render\()/;
 
@@ -26,6 +27,10 @@ async function verifyEntryPage() {
 
   if (javascriptInBody.test(html)) {
     throw new Error("index.html semble contenir du JavaScript brut. Publication annulee.");
+  }
+
+  if (!html.includes(`Version : ${release.version}`) || !html.includes(`Dernière mise à jour : ${release.updated}`)) {
+    throw new Error("index.html ne correspond pas a la version actuelle de version.json.");
   }
 }
 

@@ -801,6 +801,20 @@ p { line-height: 1.45; }
   margin-bottom: 9px;
 }
 
+.notification-group + .notification-group {
+  border-top: 1px solid #ebe6db;
+  margin-top: 15px;
+  padding-top: 2px;
+}
+
+.notification-group .settings-group-title {
+  margin-top: 4px;
+}
+
+.notification-group .fine-print {
+  margin-bottom: 0;
+}
+
 .app-version-card {
   box-shadow: none;
 }

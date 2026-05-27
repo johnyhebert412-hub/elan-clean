@@ -15,6 +15,7 @@ if (!allowedKinds.has(kind) || !summary) {
 const versionPath = path.join(root, "version.json");
 const swPath = path.join(root, "sw.js");
 const changelogPath = path.join(root, "CHANGELOG.md");
+const indexPath = path.join(root, "index.html");
 const release = JSON.parse(await readFile(versionPath, "utf8"));
 const numbers = release.version.replace(/^v/, "").split(".").map(Number);
 
@@ -30,7 +31,7 @@ if (kind === "major") {
 }
 
 const version = `v${numbers.join(".")}`;
-const updated = new Date().toISOString().slice(0, 10);
+const updated = new Intl.DateTimeFormat("en-CA", { timeZone: "America/Toronto" }).format(new Date());
 const historyEntry = { version, date: updated, changes: [summary] };
 const nextRelease = {
   version,
@@ -59,5 +60,15 @@ const updatedWorker = serviceWorker.replace(
   `const CACHE = "elan-pilote-${version}";`
 );
 await writeFile(swPath, updatedWorker, "utf8");
+
+const index = await readFile(indexPath, "utf8");
+const updatedIndex = index
+  .replace(/Version : v[\d.]+/, `Version : ${version}`)
+  .replace(/Dernière mise à jour : \d{4}-\d{2}-\d{2}/, `Dernière mise à jour : ${updated}`)
+  .replace(
+    /<ul id="app-changes" class="version-changes">[\s\S]*?<\/ul>/,
+    `<ul id="app-changes" class="version-changes">\n              <li>${summary}</li>\n            </ul>`
+  );
+await writeFile(indexPath, updatedIndex, "utf8");
 
 console.log(`Elan ${version} - ${updated}`);

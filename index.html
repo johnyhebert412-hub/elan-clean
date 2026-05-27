@@ -357,9 +357,7 @@
 
         <section id="settings" class="view" aria-label="Parametres">
           <div class="section-heading">
-            <p class="eyebrow">Paramètres</p>
-            <h2>Notifications</h2>
-            <p class="muted">Les alertes utiles, au même endroit.</p>
+            <h2>Paramètres</h2>
           </div>
           <article class="card settings-card">
             <h2>Notifications</h2>
@@ -372,56 +370,61 @@
               <button id="notification-button" class="primary" data-action="enable-notifications">Activer</button>
             </div>
             <p id="notification-capability" class="notification-capability">Active les notifications pour recevoir les fins de timers.</p>
-            <label class="toggle-line">
-              <input id="notification-master" type="checkbox" data-notification-setting="enabled">
-              <span>Alertes Elan</span>
-            </label>
-            <p class="settings-help timer-alert-copy">Les fins de timers et de pauses sont signalées.</p>
-            <details class="notification-options">
-              <summary>Personnaliser</summary>
-              <label class="preference-field">
-                <span>Fréquence des rappels</span>
-                <select id="notification-frequency" data-notification-setting="frequency">
-                  <option value="minimal">Minimum</option>
-                  <option value="gentle">Douce</option>
-                  <option value="balanced">Normale</option>
-                </select>
-              </label>
-              <label class="preference-field">
-                <span>Charge mentale maintenant</span>
-                <select id="mental-load" data-notification-setting="stress">
-                  <option value="normal">Correcte</option>
-                  <option value="fragile">Fragile</option>
-                  <option value="high">Surchargée</option>
-                </select>
-              </label>
-              <label class="toggle-line">
-                <input type="checkbox" data-notification-setting="silent">
-                <span>Mode silencieux</span>
-              </label>
-              <label class="toggle-line">
-                <input type="checkbox" data-notification-setting="protectWork">
-                <span>Protéger le mode travail</span>
-              </label>
-              <label class="toggle-line">
-                <input type="checkbox" data-notification-setting="urgentOnly">
-                <span>Urgence seulement</span>
-              </label>
-              <h3 class="settings-group-title">Rappels importants</h3>
-              <label class="toggle-line">
-                <input type="checkbox" data-reminder-toggle="arrival">
-                <span>Commencer une action</span>
-                <input type="time" value="18:00" data-reminder-time="arrival">
-              </label>
-              <label class="toggle-line">
-                <input type="checkbox" data-reminder-toggle="evening">
-                <span>Résumé quotidien</span>
-                <input type="time" value="21:00" data-reminder-time="evening">
-              </label>
-            </details>
             <button id="notification-test-button" class="secondary full" data-action="test-notification">Tester une notification</button>
             <p id="notification-result" class="notification-result hidden" aria-live="polite"></p>
-            <p class="fine-print">Garde Elan ouvert pour recevoir ces alertes dans cette version.</p>
+            <details class="notification-options">
+              <summary>Personnaliser</summary>
+              <section class="notification-group" aria-label="Fréquence et rappels">
+                <h3 class="settings-group-title">Fréquence et rappels</h3>
+                <label class="toggle-line">
+                  <input id="notification-master" type="checkbox" data-notification-setting="enabled">
+                  <span>Alertes Elan</span>
+                </label>
+                <label class="preference-field">
+                  <span>Fréquence des rappels</span>
+                  <select id="notification-frequency" data-notification-setting="frequency">
+                    <option value="minimal">Minimum</option>
+                    <option value="gentle">Douce</option>
+                    <option value="balanced">Normale</option>
+                  </select>
+                </label>
+                <label class="toggle-line">
+                  <input type="checkbox" data-reminder-toggle="arrival">
+                  <span>Commencer une action</span>
+                  <input type="time" value="18:00" data-reminder-time="arrival">
+                </label>
+                <label class="toggle-line">
+                  <input type="checkbox" data-reminder-toggle="evening">
+                  <span>Résumé quotidien</span>
+                  <input type="time" value="21:00" data-reminder-time="evening">
+                </label>
+                <p class="settings-help timer-alert-copy">Les fins de timers et de pauses sont signalées.</p>
+                <p class="fine-print">Les rappels fonctionnent quand Élan reste ouvert.</p>
+              </section>
+              <section class="notification-group" aria-label="Calme et travail">
+                <h3 class="settings-group-title">Calme et travail</h3>
+                <label class="preference-field">
+                  <span>Charge mentale maintenant</span>
+                  <select id="mental-load" data-notification-setting="stress">
+                    <option value="normal">Correcte</option>
+                    <option value="fragile">Fragile</option>
+                    <option value="high">Surchargée</option>
+                  </select>
+                </label>
+                <label class="toggle-line">
+                  <input type="checkbox" data-notification-setting="silent">
+                  <span>Mode silencieux</span>
+                </label>
+                <label class="toggle-line">
+                  <input type="checkbox" data-notification-setting="protectWork">
+                  <span>Protéger le mode travail</span>
+                </label>
+                <label class="toggle-line">
+                  <input type="checkbox" data-notification-setting="urgentOnly">
+                  <span>Urgence seulement</span>
+                </label>
+              </section>
+            </details>
           </article>
 
           <article id="install-card" class="card hidden">
@@ -435,12 +438,10 @@
           </article>
           <article class="card app-version-card">
             <h2>À propos</h2>
-            <p class="version-line"><strong id="app-version">Version : v0.4.2</strong><span id="app-updated">Dernière mise à jour : 2026-05-26</span></p>
+            <p class="version-line"><strong id="app-version">Version : v0.4.9</strong><span id="app-updated">Dernière mise à jour : 2026-05-27</span></p>
             <p class="settings-help version-title">Nouveautés</p>
             <ul id="app-changes" class="version-changes">
-              <li>Navigation Domaines et mode Travail corrigés.</li>
-              <li>Coach adaptatif et notifications simplifiées.</li>
-              <li>Déploiement GitHub et Vercel préparé.</li>
+              <li>Texte des rappels simplifie.</li>
             </ul>
           </article>
           <article class="card">

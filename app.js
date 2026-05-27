@@ -1145,7 +1145,7 @@ function reportNotification(message, isError = false) {
 
 async function renderVersion() {
   try {
-    const response = await fetch("./version.json", { cache: "no-store" });
+    const response = await fetch(`./version.json?release=${Date.now()}`, { cache: "no-store" });
     if (!response.ok) return;
     const release = await response.json();
     $("#app-version").textContent = `Version : ${release.version}`;
@@ -1414,9 +1414,24 @@ window.addEventListener("beforeinstallprompt", event => {
 });
 
 if ("serviceWorker" in navigator) {
-  navigator.serviceWorker.register("./sw.js").then(() => navigator.serviceWorker.ready).then(() => {
-    renderInstallStatus();
-  }).catch(() => {});
+  const hadController = Boolean(navigator.serviceWorker.controller);
+  let refreshingForUpdate = false;
+
+  navigator.serviceWorker.addEventListener("controllerchange", () => {
+    if (!hadController || refreshingForUpdate) return;
+    refreshingForUpdate = true;
+    window.location.reload();
+  });
+
+  navigator.serviceWorker.register("./sw.js", { updateViaCache: "none" })
+    .then(registration => {
+      registration.update();
+      return navigator.serviceWorker.ready;
+    })
+    .then(() => {
+      renderInstallStatus();
+    })
+    .catch(() => {});
 }
 
 renderDayTypes();
