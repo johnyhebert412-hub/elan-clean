@@ -1,0 +1,26 @@
+{
+  "name": "Elan - Petits pas, vraie autonomie",
+  "short_name": "Elan",
+  "description": "Coach de micro-objectifs et score quotidien pour retrouver un quotidien fonctionnel.",
+  "lang": "fr-CA",
+  "id": "/",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#f4f1e9",
+  "theme_color": "#162723",
+  "icons": [
+    {
+      "src": "icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
