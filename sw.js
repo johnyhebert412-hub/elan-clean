@@ -1,4 +1,4 @@
-const CACHE = "elan-pilote-v0.4.9";
+const CACHE = "elan-pilote-v0.4.8";
 const APP_FILES = [
   "./",
   "./index.html",

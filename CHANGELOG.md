@@ -1,9 +1,5 @@
 # Historique Elan
 
-## v0.4.9 - 2026-05-27
-
-- Texte des rappels simplifie.
-
 ## v0.4.8 - 2026-05-27
 
 - Notifications personnalisees mieux organisees.
