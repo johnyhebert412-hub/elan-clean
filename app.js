@@ -3,7 +3,6 @@
 
   const STORAGE_KEY = "elan-clean-v0.5.0";
   const suggestedActions = {
-    work: { title: "Préparer ton travail", text: "Configure ton horaire pour garder le focus plus calme.", action: "open-work" },
     off: { title: "Choisir un petit départ", text: "Garde la journée légère avec une action simple.", action: "complete" },
     finance: { title: "Vérifier ton solde", text: "Ouvre ton compte et regarde le montant disponible.", action: "complete" },
     house: { title: "Faire la vaisselle", text: "Un geste simple pour remettre l'espace en ordre.", action: "complete" },
@@ -14,7 +13,6 @@
     couple: { title: "Envoyer un message gentil", text: "Un petit signe de connexion suffit.", action: "complete" }
   };
   const domainInfo = {
-    work: { total: 3, reward: "Pause calme" },
     off: { total: 3, reward: "Temps relax" },
     finance: { total: 4, reward: "Podcast" },
     house: { total: 3, reward: "Musique" },
@@ -26,6 +24,18 @@
   };
 
   const COINS_PER_TASK = 5;
+  const CHALLENGE_DURATIONS = [2, 5, 8, 12, 15];
+  const checkInChoices = [
+    "Je travaille",
+    "Je procrastine",
+    "Je me repose",
+    "Je suis concentré",
+    "Je suis perdu",
+    "Je fais du ménage",
+    "Je joue",
+    "Je suis fatigué",
+    "Je suis motivé"
+  ];
   const defaultShopRewards = [
     { name: "Gaming", cost: 35, duration: "20 min" },
     { name: "Film", cost: 70, duration: "1 film" },
@@ -47,7 +57,6 @@
   };
 
   const homeDomains = {
-    work: { title: "Travail", subtitle: "Organisation du shift, pauses, moins de stress.", missions: [{ label: "Organiser le shift", action: "open-domain" }, { label: "Choisir une priorité" }, { label: "Prévoir une pause" }, { label: "Écrire la prochaine tâche" }, { label: "Préparer ton espace" }, { label: "Noter ton énergie" }] },
     off: { title: "Congé", subtitle: "Journée plus légère, sans pression.", missions: [{ label: "Choisir une petite chose" }, { label: "Préparer un coin calme" }, { label: "Faire 5 minutes utiles" }, { label: "Sortir prendre l'air" }, { label: "Ranger un petit espace" }, { label: "Planifier un moment relax" }] },
     house: { title: "Maison", subtitle: "Petits gestes pour avancer à la maison.", missions: [{ label: "Faire la vaisselle" }, { label: "Ranger une surface" }, { label: "Lancer une brassée" }, { label: "Ranger une pièce" }, { label: "Vider une poubelle" }, { label: "Essuyer un comptoir" }, { label: "Plier quelques vêtements" }, { label: "Nettoyer un coin rapide" }] },
     finance: { title: "Finances", subtitle: "Budget simple, anti impulsivité.", missions: [{ label: "Vérifier le solde" }, { label: "Attendre avant un achat" }, { label: "Payer une facture" }, { label: "Noter une dépense" }, { label: "Annuler un abonnement inutile" }, { label: "Mettre un petit montant de côté" }] },
@@ -84,34 +93,46 @@
     customGoals: {},
     ideas: [],
     quickItems: [],
+    checkIns: [],
     agenda: [],
     agendaDate: "",
-    work: { start: "", end: "", breaks: "none", energy: "steady", doNotDisturb: false, softReminders: false },
+    activeChallenge: null,
     notifications: { important: false, summary: false }
   };
 
   let state = loadState();
   let toastTimer;
   let quickType = "Tâche";
+  let selectedCheckIn = "Je travaille";
+  let selectedEnergy = "moyenne";
   let deferredInstallPrompt = null;
   let emergencyIndex = 0;
   let agendaReminderTimers = [];
+  let challengeTimerId = null;
+  let challengeCountdownId = null;
+  let isCompletingChallenge = false;
+
+  function cloneState(value) {
+    if (typeof structuredClone === "function") return structuredClone(value);
+    return JSON.parse(JSON.stringify(value));
+  }
 
   function loadState() {
     try {
       const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || "null");
-      if (!saved) return structuredClone(defaultState);
+      if (!saved) return cloneState(defaultState);
       const nextState = {
-        ...structuredClone(defaultState),
+        ...cloneState(defaultState),
         ...saved,
         progress: { ...defaultState.progress, ...saved.progress },
         customGoals: { ...defaultState.customGoals, ...saved.customGoals },
         ideas: Array.isArray(saved.ideas) ? saved.ideas : [],
         rewards: Array.isArray(saved.rewards) ? saved.rewards : [],
+        checkIns: Array.isArray(saved.checkIns) ? saved.checkIns : [],
         agenda: Array.isArray(saved.agenda) ? saved.agenda : [],
         agendaDate: typeof saved.agendaDate === "string" ? saved.agendaDate : "",
+        activeChallenge: saved.activeChallenge && typeof saved.activeChallenge === "object" ? saved.activeChallenge : null,
         coins: Number.isFinite(saved.coins) ? saved.coins : (Number.isFinite(saved.wins) ? saved.wins * COINS_PER_TASK : 0),
-        work: { ...defaultState.work, ...saved.work },
         notifications: { ...defaultState.notifications, ...saved.notifications }
       };
       if (nextState.selectedDomain && !suggestedActions[nextState.selectedDomain]) {
@@ -119,7 +140,7 @@
       }
       return nextState;
     } catch (error) {
-      return structuredClone(defaultState);
+      return cloneState(defaultState);
     }
   }
 
@@ -211,7 +232,7 @@
         }
         state.selectedDomain = domain;
         saveState();
-        completeTask(mission.label);
+        openChallengeSetup(mission.label, domain);
       });
       return button;
     }));
@@ -235,6 +256,238 @@
     $("selected-domain-card")?.classList.add("hidden");
   }
 
+  function openChallengeSetup(label, domain = state.selectedDomain || state.currentHomeDomain || "") {
+    if (!label) return;
+    if (state.activeChallenge && !state.activeChallenge.rewardedAt) {
+      showToast("Un défi est déjà en cours.");
+      renderChallengeTimer();
+      return;
+    }
+    state.selectedDomain = domain || state.selectedDomain;
+    state.activeChallenge = {
+      id: `${Date.now()}-${Math.random().toString(36).slice(2)}`,
+      label,
+      domain: state.selectedDomain,
+      durationMinutes: 8,
+      durationMs: 8 * 60000,
+      startedAt: null,
+      endsAt: null,
+      status: "setup",
+      rewardedAt: null
+    };
+    saveState();
+    renderChallengeTimer();
+    $("challenge-panel")?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+  }
+
+  function setChallengeDuration(minutes) {
+    const duration = Number(minutes);
+    if (!state.activeChallenge || !Number.isFinite(duration)) return;
+    state.activeChallenge.durationMinutes = duration;
+    state.activeChallenge.durationMs = duration * 60000;
+    saveState();
+    renderChallengeTimer();
+  }
+
+  function startChallenge() {
+    const challenge = state.activeChallenge;
+    if (!challenge || challenge.status !== "setup") return;
+    window.clearInterval(challengeCountdownId);
+    playStartTone();
+    const now = Date.now();
+    let count = 3;
+    state.activeChallenge = {
+      ...challenge,
+      startedAt: now,
+      endsAt: now + challenge.durationMs,
+      status: "countdown"
+    };
+    saveState();
+    renderChallengeTimer(count);
+    challengeCountdownId = window.setInterval(() => {
+      count -= 1;
+      if (count <= 0) {
+        window.clearInterval(challengeCountdownId);
+        state.activeChallenge = {
+          ...state.activeChallenge,
+          status: "running"
+        };
+        saveState();
+        startChallengeTicker();
+        renderChallengeTimer();
+        showToast("GO. Une chose à la fois.");
+        return;
+      }
+      renderChallengeTimer(count);
+    }, 700);
+  }
+
+  function cancelChallenge() {
+    if (!state.activeChallenge) return;
+    window.clearInterval(challengeCountdownId);
+    window.clearInterval(challengeTimerId);
+    state.activeChallenge = null;
+    saveState();
+    renderChallengeTimer();
+  }
+
+  function startChallengeTicker() {
+    window.clearInterval(challengeTimerId);
+    challengeTimerId = window.setInterval(updateChallengeTime, 1000);
+    updateChallengeTime();
+  }
+
+  function resumeChallengeTimer() {
+    if (state.activeChallenge?.status === "countdown") {
+      state.activeChallenge.status = "running";
+      saveState();
+    }
+    if (state.activeChallenge?.status === "running") startChallengeTicker();
+  }
+
+  function updateChallengeTime() {
+    const challenge = state.activeChallenge;
+    if (!challenge) {
+      window.clearInterval(challengeTimerId);
+      return;
+    }
+    if (challenge.status === "running" && Date.now() >= challenge.endsAt) {
+      state.activeChallenge.status = "done";
+      window.clearInterval(challengeTimerId);
+      saveState();
+      notifyChallengeDone();
+    }
+    renderChallengeTimer();
+  }
+
+  function notifyChallengeDone() {
+    if ("vibrate" in navigator) navigator.vibrate([25, 40, 25]);
+    if ("Notification" in window && Notification.permission === "granted") {
+      new Notification("Défi terminé", { body: "Belle présence. Tu peux valider quand c'est fait." });
+    }
+    showToast("Défi terminé. Tu as tenu le cap.");
+  }
+
+  function completeActiveChallenge() {
+    const challenge = state.activeChallenge;
+    if (!challenge || !["running", "done"].includes(challenge.status) || challenge.rewardedAt || isCompletingChallenge) return;
+    isCompletingChallenge = true;
+    const button = $("finish-challenge");
+    if (button) button.disabled = true;
+    window.clearInterval(challengeCountdownId);
+    window.clearInterval(challengeTimerId);
+    const remainingMs = Math.max(0, (challenge.endsAt || Date.now()) - Date.now());
+    const successMessage = remainingMs > 0
+      ? `Bravo ! Tu as terminé avec encore ${formatRemainingText(remainingMs)}.`
+      : "Bravo ! Défi terminé avec calme.";
+    state.activeChallenge.rewardedAt = Date.now();
+    state.activeChallenge.status = "completed";
+    state.selectedDomain = challenge.domain;
+    saveState();
+    completeTask(challenge.label, successMessage);
+    state.activeChallenge = null;
+    isCompletingChallenge = false;
+    saveState();
+    renderChallengeTimer();
+  }
+
+  function formatRemaining(ms) {
+    const totalSeconds = Math.max(0, Math.ceil(ms / 1000));
+    const minutes = Math.floor(totalSeconds / 60);
+    const seconds = totalSeconds % 60;
+    return `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
+  }
+
+  function formatRemainingText(ms) {
+    const totalSeconds = Math.max(0, Math.ceil(ms / 1000));
+    const minutes = Math.floor(totalSeconds / 60);
+    const seconds = totalSeconds % 60;
+    if (minutes && seconds) return `${minutes} min ${seconds} s`;
+    if (minutes) return `${minutes} min`;
+    return `${seconds} seconde${seconds > 1 ? "s" : ""}`;
+  }
+
+  function renderChallengeTimer(countdownValue = null) {
+    const panel = $("challenge-panel");
+    const title = $("challenge-title");
+    const durationGroup = $("challenge-durations");
+    const readyButton = $("start-challenge");
+    const cancelButton = $("cancel-challenge");
+    const finishButton = $("finish-challenge");
+    const time = $("challenge-time");
+    const progress = $("challenge-progress");
+    const message = $("challenge-message");
+    const challenge = state.activeChallenge;
+
+    if (!panel || !challenge) {
+      panel?.classList.add("hidden");
+      return;
+    }
+
+    panel.classList.remove("hidden");
+    panel.dataset.status = challenge.status;
+    if (title) title.textContent = challenge.label;
+    if (durationGroup) {
+      durationGroup.classList.toggle("hidden", challenge.status !== "setup");
+      durationGroup.replaceChildren(...CHALLENGE_DURATIONS.map((duration) => {
+        const button = document.createElement("button");
+        button.type = "button";
+        button.textContent = `${duration} min`;
+        button.className = duration === challenge.durationMinutes ? "selected" : "";
+        button.addEventListener("click", () => setChallengeDuration(duration));
+        return button;
+      }));
+    }
+
+    const remaining = challenge.endsAt ? challenge.endsAt - Date.now() : challenge.durationMs;
+    const ratio = challenge.status === "running" || challenge.status === "done"
+      ? Math.max(0, Math.min(1, remaining / challenge.durationMs))
+      : 1;
+    if (progress) progress.style.setProperty("--progress", `${ratio * 360}deg`);
+    if (time) {
+      time.textContent = countdownValue
+        ? (countdownValue > 0 ? String(countdownValue) : "GO")
+        : formatRemaining(remaining);
+    }
+    if (message) {
+      message.textContent = challenge.status === "setup"
+        ? "Choisis ta durée, puis démarre doucement."
+        : challenge.status === "countdown"
+          ? "On y va."
+          : challenge.status === "done"
+            ? "Réussi. Respire, puis valide ton défi."
+            : "Reste avec cette action. C'est suffisant.";
+    }
+    if (readyButton) readyButton.classList.toggle("hidden", challenge.status !== "setup");
+    if (cancelButton) cancelButton.classList.toggle("hidden", challenge.status === "done");
+    if (finishButton) {
+      finishButton.classList.toggle("hidden", !["running", "done"].includes(challenge.status));
+      finishButton.disabled = Boolean(challenge.rewardedAt) || isCompletingChallenge;
+    }
+  }
+
+  function playStartTone() {
+    try {
+      const AudioContext = window.AudioContext || window.webkitAudioContext;
+      if (!AudioContext) return;
+      const context = new AudioContext();
+      const oscillator = context.createOscillator();
+      const gain = context.createGain();
+      oscillator.type = "sine";
+      oscillator.frequency.value = 540;
+      gain.gain.setValueAtTime(0.0001, context.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.05, context.currentTime + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.0001, context.currentTime + 0.16);
+      oscillator.connect(gain);
+      gain.connect(context.destination);
+      oscillator.start();
+      oscillator.stop(context.currentTime + 0.18);
+      window.setTimeout(() => context.close(), 300);
+    } catch (error) {
+      // Le son est bonus; le défi démarre même si le navigateur bloque l'audio.
+    }
+  }
+
   function renderHomeSuggestion() {
     const button = $("next-action");
     if (!button) return;
@@ -256,11 +509,11 @@
   }
 
   function completeEmergencyAction() {
-    completeTask(emergencyActions[emergencyIndex]);
+    openChallengeSetup(emergencyActions[emergencyIndex], "mental");
     $("emergency-card")?.classList.add("hidden");
   }
 
-  function completeTask(label) {
+  function completeTask(label, successMessage = "") {
     state.wins += 1;
     state.coins += COINS_PER_TASK;
     const domain = state.selectedDomain;
@@ -271,7 +524,9 @@
     renderDomainProgress();
     renderShop();
     const reward = pickReward(domain);
-    showToast(`${label} : fait. +${COINS_PER_TASK} pièces. ${reward}`);
+    showToast(successMessage
+      ? `${successMessage} +${COINS_PER_TASK} pièces. ${reward}`
+      : `${label} : fait. +${COINS_PER_TASK} pièces. ${reward}`);
     showView("home");
   }
 
@@ -310,6 +565,116 @@
     if (!$("quick-add-panel") || !$("quick-add-button")) return;
     $("quick-add-panel").classList.add("hidden");
     $("quick-add-button").setAttribute("aria-expanded", "false");
+  }
+
+  function openCheckIn() {
+    const panel = $("checkin-panel");
+    const button = $("checkin-button");
+    if (!panel || !button) return;
+    panel.classList.remove("hidden");
+    button.setAttribute("aria-expanded", "true");
+    renderCheckInChoices();
+    $("checkin-note")?.focus();
+  }
+
+  function closeCheckIn() {
+    const panel = $("checkin-panel");
+    const button = $("checkin-button");
+    if (!panel || !button) return;
+    panel.classList.add("hidden");
+    button.setAttribute("aria-expanded", "false");
+  }
+
+  function selectCheckIn(value) {
+    selectedCheckIn = value;
+    renderCheckInChoices();
+  }
+
+  function selectEnergy(value) {
+    selectedEnergy = value;
+    renderCheckInChoices();
+  }
+
+  function renderCheckInChoices() {
+    const choices = $("checkin-choices");
+    const energy = $("checkin-energy");
+    if (choices) {
+      choices.replaceChildren(...checkInChoices.map((choice) => {
+        const button = document.createElement("button");
+        button.type = "button";
+        button.textContent = choice;
+        button.className = choice === selectedCheckIn ? "selected" : "";
+        button.addEventListener("click", () => selectCheckIn(choice));
+        return button;
+      }));
+    }
+    if (energy) {
+      energy.replaceChildren(...["basse", "moyenne", "haute"].map((level) => {
+        const button = document.createElement("button");
+        button.type = "button";
+        button.textContent = level;
+        button.className = level === selectedEnergy ? "selected" : "";
+        button.addEventListener("click", () => selectEnergy(level));
+        return button;
+      }));
+    }
+  }
+
+  function saveCheckIn() {
+    const noteInput = $("checkin-note");
+    const note = noteInput?.value.trim() || "";
+    const checkIn = {
+      status: selectedCheckIn,
+      energy: selectedEnergy,
+      note,
+      createdAt: Date.now()
+    };
+    state.checkIns = [...state.checkIns, checkIn].slice(-40);
+    saveState();
+    if (noteInput) noteInput.value = "";
+    renderCheckInHistory();
+    closeCheckIn();
+    showToast(checkInMessage(checkIn));
+  }
+
+  function checkInMessage(checkIn) {
+    if (checkIn.status === "Je suis fatigué" || checkIn.energy === "basse") {
+      return "Tu sembles fatigué aujourd'hui. On garde ça doux.";
+    }
+    if (checkIn.status === "Je procrastine" || checkIn.status === "Je suis perdu") {
+      return "C'est noté. Une petite mission peut aider à revenir.";
+    }
+    if (checkIn.status === "Je suis concentré" || checkIn.status === "Je suis motivé") {
+      return "Belle clarté. Continue une action à la fois.";
+    }
+    return "Check-in gardé. Tu viens de reprendre le fil.";
+  }
+
+  function renderCheckInHistory() {
+    const card = $("checkin-history-card");
+    const list = $("checkin-history");
+    const stats = $("checkin-stats");
+    if (!card || !list || !stats) return;
+    const recent = state.checkIns.slice(-4).reverse();
+    if (!recent.length) {
+      card.classList.add("hidden");
+      list.replaceChildren();
+      return;
+    }
+    const today = todayKey();
+    const todayItems = state.checkIns.filter((item) => dateKey(new Date(item.createdAt)) === today);
+    const lowEnergy = todayItems.filter((item) => item.energy === "basse").length;
+    stats.textContent = lowEnergy
+      ? `${todayItems.length} aujourd'hui · énergie basse ${lowEnergy} fois`
+      : `${todayItems.length} aujourd'hui`;
+    list.replaceChildren(...recent.map((item) => {
+      const row = document.createElement("p");
+      row.className = "checkin-item";
+      const time = new Date(item.createdAt).toLocaleTimeString("fr-CA", { hour: "2-digit", minute: "2-digit" });
+      row.textContent = `${time} · ${item.status} · énergie ${item.energy}${item.note ? ` · ${item.note}` : ""}`;
+      return row;
+    }));
+    card.classList.remove("hidden");
   }
 
   function selectQuickType(type) {
@@ -631,9 +996,17 @@
     if (!item) return;
     const nextText = window.prompt("Modifier", item.text)?.trim();
     if (!nextText) return;
-    const nextDate = window.prompt("Date", item.date)?.trim();
+    const nextDate = window.prompt("Date (AAAA-MM-JJ)", item.date)?.trim();
     if (!nextDate) return;
     const nextTime = window.prompt("Heure", item.time || "")?.trim() || "";
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(nextDate)) {
+      showToast("Date invalide. Format attendu : AAAA-MM-JJ.");
+      return;
+    }
+    if (nextTime && !/^\d{2}:\d{2}$/.test(nextTime)) {
+      showToast("Heure invalide. Format attendu : HH:MM.");
+      return;
+    }
     const nextReminder = window.prompt("Rappel : none, 0, 5, 15, 30 ou 60", item.reminder || "none")?.trim() || "none";
     item.text = nextText;
     item.date = nextDate;
@@ -800,36 +1173,6 @@
     renderShop();
     renderOnboarding();
     showToast("Récompense ajoutée à la boutique.");
-  }
-
-  function renderWork() {
-    $("work-start").value = state.work.start;
-    $("work-end").value = state.work.end;
-    $("work-breaks").value = state.work.breaks;
-    $("work-energy").value = state.work.energy;
-    $("work-dnd").checked = state.work.doNotDisturb;
-    $("work-soft-reminders").checked = state.work.softReminders;
-
-    const summary = $("work-summary");
-    if (!state.work.start || !state.work.end) {
-      summary.classList.add("hidden");
-      return;
-    }
-    const pauseLabel = {
-      none: "pauses à déterminer",
-      one: "1 pause",
-      two: "2 pauses",
-      meal: "pause repas et courte pause"
-    }[state.work.breaks];
-    const energyLabel = {
-      low: "basse",
-      steady: "correcte",
-      high: "élevée"
-    }[state.work.energy];
-    const focus = state.work.doNotDisturb ? "Ne pas déranger actif." : "Alertes normales.";
-    const reminders = state.work.softReminders ? "Rappels doux actifs." : "Sans rappel automatique.";
-    summary.textContent = `${state.work.start} à ${state.work.end} - ${pauseLabel}. Énergie ${energyLabel}. ${focus} ${reminders}`;
-    summary.classList.remove("hidden");
   }
 
   function notificationPermissionText() {
@@ -1030,6 +1373,12 @@
   }
 
   function bindEvents() {
+    const bindById = (id, eventName, handler) => {
+      const element = $(id);
+      if (!element) return;
+      element.addEventListener(eventName, handler);
+    };
+
     document.querySelectorAll("[data-view-button]").forEach((button) => {
       button.addEventListener("click", () => showView(button.dataset.viewButton));
     });
@@ -1044,8 +1393,8 @@
     document.querySelectorAll("[data-select-domain]").forEach((button) => {
       button.addEventListener("click", () => selectHomeDomain(button.dataset.selectDomain));
     });
-    $("close-selected-domain").addEventListener("click", closeSelectedDomain);
-    $("add-selected-goal").addEventListener("click", () => addCustomGoal($("add-selected-goal").dataset.addGoal));
+    bindById("close-selected-domain", "click", closeSelectedDomain);
+    bindById("add-selected-goal", "click", () => addCustomGoal($("add-selected-goal").dataset.addGoal));
     document.querySelectorAll("[data-toggle-missions]").forEach((button) => {
       button.addEventListener("click", () => {
         const card = button.closest(".home-domain-card");
@@ -1066,16 +1415,25 @@
           saveState();
           renderHomeSuggestion();
         }
-        completeTask(button.dataset.complete);
+        openChallengeSetup(button.dataset.complete, state.selectedDomain);
       });
     });
 
-    $("next-action").addEventListener("click", () => showEmergencyAction(false));
-    $("emergency-done").addEventListener("click", completeEmergencyAction);
-    $("emergency-other").addEventListener("click", () => showEmergencyAction(true));
-    $("choose-domain-button").addEventListener("click", () => showView("domains"));
+    bindById("next-action", "click", () => showEmergencyAction(false));
+    bindById("emergency-done", "click", completeEmergencyAction);
+    bindById("emergency-other", "click", () => showEmergencyAction(true));
+    bindById("start-challenge", "click", startChallenge);
+    bindById("cancel-challenge", "click", cancelChallenge);
+    bindById("finish-challenge", "click", completeActiveChallenge);
+    bindById("choose-domain-button", "click", () => showView("domains"));
     $("quick-add-button")?.addEventListener("click", openQuickAdd);
     $("close-quick-add")?.addEventListener("click", closeQuickAdd);
+    $("checkin-button")?.addEventListener("click", openCheckIn);
+    $("close-checkin")?.addEventListener("click", closeCheckIn);
+    $("save-checkin")?.addEventListener("click", saveCheckIn);
+    $("checkin-note")?.addEventListener("keydown", (event) => {
+      if (event.key === "Enter") saveCheckIn();
+    });
     document.querySelectorAll("[data-quick-type]").forEach((button) => {
       button.addEventListener("click", () => selectQuickType(button.dataset.quickType));
     });
@@ -1098,51 +1456,24 @@
       if (event.key === "Enter") saveShopReward();
     });
 
-    $("work-form").addEventListener("submit", (event) => {
-      event.preventDefault();
-      state.work = {
-        start: $("work-start").value,
-        end: $("work-end").value,
-        breaks: $("work-breaks").value,
-        energy: $("work-energy").value,
-        doNotDisturb: $("work-dnd").checked,
-        softReminders: $("work-soft-reminders").checked
-      };
-      saveState();
-      renderWork();
-      showToast("Horaire enregistré.");
-    });
-
-    $("work-help").addEventListener("click", () => {
-      const box = $("work-help-box");
-      if (state.work.energy === "low") {
-        box.textContent = "Ton énergie est basse. Choisis une action essentielle, puis prévois une pause.";
-      } else {
-        box.textContent = state.work.doNotDisturb
-          ? "Prends 60 secondes. Choisis une seule priorité, puis reprends sans notification."
-          : "Bloque une seule petite étape. Commence doucement, sans chercher la perfection.";
-      }
-      box.classList.remove("hidden");
-    });
-
-    $("notify-important").addEventListener("change", (event) => {
+    bindById("notify-important", "change", (event) => {
       state.notifications.important = event.target.checked;
       saveState();
       showToast("Réglage enregistré.");
     });
-    $("notify-summary").addEventListener("change", (event) => {
+    bindById("notify-summary", "change", (event) => {
       state.notifications.summary = event.target.checked;
       saveState();
       showToast("Réglage enregistré.");
     });
-    $("enable-notifications").addEventListener("click", requestNotifications);
-    $("test-notification").addEventListener("click", testNotification);
-    $("settings-install-button").addEventListener("click", startInstall);
-    $("install-yes").addEventListener("click", startInstall);
-    $("install-later").addEventListener("click", dismissInstallInvite);
-    $("save-idea").addEventListener("click", saveIdea);
-    $("save-reward").addEventListener("click", saveReward);
-    $("reward-input").addEventListener("keydown", (event) => {
+    bindById("enable-notifications", "click", requestNotifications);
+    bindById("test-notification", "click", testNotification);
+    bindById("settings-install-button", "click", startInstall);
+    bindById("install-yes", "click", startInstall);
+    bindById("install-later", "click", dismissInstallInvite);
+    bindById("save-idea", "click", saveIdea);
+    bindById("save-reward", "click", saveReward);
+    bindById("reward-input", "keydown", (event) => {
       if (event.key === "Enter") saveReward();
     });
     document.querySelectorAll("[data-motivation]").forEach((button) => {
@@ -1151,13 +1482,14 @@
     document.querySelectorAll("[data-reward]").forEach((button) => {
       button.addEventListener("click", () => toggleSelection(button, "rewards", button.dataset.reward));
     });
-    $("finish-onboarding").addEventListener("click", finishOnboarding);
+    bindById("finish-onboarding", "click", finishOnboarding);
 
-    $("reset-data").addEventListener("click", () => {
+    bindById("reset-data", "click", () => {
       localStorage.removeItem(STORAGE_KEY);
-      state = structuredClone(defaultState);
+      state = cloneState(defaultState);
       render();
       closeDomain();
+      closeCheckIn();
       showView("home");
       showToast("Données effacées.");
     });
@@ -1165,18 +1497,21 @@
 
   function render() {
     renderHomeSuggestion();
+    renderCheckInChoices();
+    renderCheckInHistory();
     renderQuickItems();
     renderAgenda();
     renderIdeas();
     renderRewards();
     renderShop();
     renderSelectedDomain();
-    renderWork();
     renderDomainProgress();
     renderSettings();
     renderOnboarding();
     renderInstallInvite();
     renderVersionInfo();
+    renderChallengeTimer();
+    resumeChallengeTimer();
     scheduleAgendaReminders();
   }
 
