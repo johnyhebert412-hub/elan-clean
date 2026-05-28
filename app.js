@@ -94,6 +94,7 @@
     ideas: [],
     quickItems: [],
     checkIns: [],
+    goalQueue: { items: [], active: false, currentIndex: 0 },
     agenda: [],
     agendaDate: "",
     activeChallenge: null,
@@ -129,6 +130,13 @@
         ideas: Array.isArray(saved.ideas) ? saved.ideas : [],
         rewards: Array.isArray(saved.rewards) ? saved.rewards : [],
         checkIns: Array.isArray(saved.checkIns) ? saved.checkIns : [],
+        goalQueue: saved.goalQueue && typeof saved.goalQueue === "object"
+          ? {
+            items: Array.isArray(saved.goalQueue.items) ? saved.goalQueue.items : [],
+            active: Boolean(saved.goalQueue.active),
+            currentIndex: Number.isFinite(saved.goalQueue.currentIndex) ? saved.goalQueue.currentIndex : 0
+          }
+          : cloneState(defaultState.goalQueue),
         agenda: Array.isArray(saved.agenda) ? saved.agenda : [],
         agendaDate: typeof saved.agendaDate === "string" ? saved.agendaDate : "",
         activeChallenge: saved.activeChallenge && typeof saved.activeChallenge === "object" ? saved.activeChallenge : null,
@@ -225,6 +233,7 @@
       const button = document.createElement("button");
       button.type = "button";
       button.textContent = mission.label;
+      button.classList.toggle("selected", isGoalQueued(mission.label, domain));
       button.addEventListener("click", () => {
         if (mission.action === "open-domain") {
           openDomain(domain);
@@ -232,7 +241,7 @@
         }
         state.selectedDomain = domain;
         saveState();
-        openChallengeSetup(mission.label, domain);
+        toggleGoalSelection(mission.label, domain);
       });
       return button;
     }));
@@ -256,7 +265,175 @@
     $("selected-domain-card")?.classList.add("hidden");
   }
 
-  function openChallengeSetup(label, domain = state.selectedDomain || state.currentHomeDomain || "") {
+  function goalKey(label, domain) {
+    return `${domain || "general"}::${label}`;
+  }
+
+  function queuedItems() {
+    const queue = state.goalQueue || { items: [], active: false, currentIndex: 0 };
+    return Array.isArray(queue.items) ? queue.items : [];
+  }
+
+  function currentQueueItem() {
+    const items = queuedItems();
+    return items[state.goalQueue?.currentIndex || 0] || null;
+  }
+
+  function isGoalQueued(label, domain) {
+    return queuedItems().some((item) => goalKey(item.label, item.domain) === goalKey(label, domain));
+  }
+
+  function toggleGoalSelection(label, domain = state.selectedDomain || state.currentHomeDomain || "") {
+    if (!label) return;
+    if (state.goalQueue?.active) {
+      showToast("La série est déjà en cours.");
+      renderGoalQueue();
+      return;
+    }
+    const key = goalKey(label, domain);
+    const items = queuedItems();
+    const exists = items.some((item) => goalKey(item.label, item.domain) === key);
+    state.goalQueue = {
+      active: false,
+      currentIndex: 0,
+      items: exists
+        ? items.filter((item) => goalKey(item.label, item.domain) !== key)
+        : [...items, { label, domain, completed: false }]
+    };
+    state.selectedDomain = domain || state.selectedDomain;
+    saveState();
+    renderGoalQueue();
+    renderSelectedDomain();
+    showToast(exists ? "Objectif retiré." : "Objectif ajouté à la série.");
+  }
+
+  function removeQueuedGoal(index) {
+    if (state.goalQueue?.active) return;
+    state.goalQueue.items = queuedItems().filter((_, itemIndex) => itemIndex !== index);
+    saveState();
+    renderGoalQueue();
+    renderSelectedDomain();
+  }
+
+  function startGoalQueue() {
+    const items = queuedItems();
+    if (!items.length || state.activeChallenge) return;
+    state.goalQueue = { items, active: true, currentIndex: 0 };
+    saveState();
+    renderGoalQueue();
+    launchCurrentQueueGoal();
+  }
+
+  function launchCurrentQueueGoal() {
+    const item = currentQueueItem();
+    if (!state.goalQueue?.active || !item) return;
+    openChallengeSetup(item.label, item.domain, { fromQueue: true });
+    showToast(`Étape ${state.goalQueue.currentIndex + 1} / ${queuedItems().length} : ${item.label}`);
+  }
+
+  function completeQueueGoal() {
+    if (!state.goalQueue?.active) return false;
+    const items = queuedItems();
+    const currentIndex = state.goalQueue.currentIndex || 0;
+    if (!items[currentIndex]) return false;
+    items[currentIndex] = { ...items[currentIndex], completed: true };
+    const nextIndex = currentIndex + 1;
+    if (nextIndex >= items.length) {
+      state.goalQueue = { items: [], active: false, currentIndex: 0 };
+      saveState();
+      renderGoalQueue();
+      showToast("Série terminée. Belle avancée.");
+      return true;
+    }
+    state.goalQueue = { items, active: true, currentIndex: nextIndex };
+    saveState();
+    renderGoalQueue();
+    const next = items[nextIndex];
+    showToast(`Bravo. Prochaine étape : ${next.label}.`);
+    window.setTimeout(() => {
+      if (!state.activeChallenge && state.goalQueue?.active) launchCurrentQueueGoal();
+    }, 900);
+    return true;
+  }
+
+  function skipQueueGoal() {
+    if (!state.goalQueue?.active || state.activeChallenge) return;
+    const items = queuedItems();
+    const nextIndex = (state.goalQueue.currentIndex || 0) + 1;
+    if (nextIndex >= items.length) {
+      stopGoalQueue("Correct. Série arrêtée.");
+      return;
+    }
+    state.goalQueue.currentIndex = nextIndex;
+    saveState();
+    renderGoalQueue();
+    launchCurrentQueueGoal();
+  }
+
+  function stopGoalQueue(message = "Correct. Tu peux reprendre plus tard.") {
+    window.clearInterval(challengeCountdownId);
+    window.clearInterval(challengeTimerId);
+    state.activeChallenge = null;
+    state.goalQueue = { items: [], active: false, currentIndex: 0 };
+    saveState();
+    renderGoalQueue();
+    renderChallengeTimer();
+    renderSelectedDomain();
+    showToast(message);
+  }
+
+  function renderGoalQueue() {
+    const panel = $("goal-queue-panel");
+    const list = $("goal-queue-list");
+    const count = $("goal-queue-count");
+    const startButton = $("start-goal-queue");
+    const skipButton = $("skip-goal");
+    const stopButton = $("stop-goal-queue");
+    const items = queuedItems();
+    const isActive = Boolean(state.goalQueue?.active);
+    if (!panel || !list) return;
+    if (!items.length) {
+      panel.classList.add("hidden");
+      list.replaceChildren();
+      updateGoalSelectionButtons();
+      return;
+    }
+    panel.classList.remove("hidden");
+    panel.dataset.status = isActive ? "active" : "setup";
+    const currentIndex = state.goalQueue?.currentIndex || 0;
+    if (count) count.textContent = isActive ? `${currentIndex + 1} / ${items.length}` : `${items.length} sélectionné${items.length > 1 ? "s" : ""}`;
+    list.replaceChildren(...items.map((item, index) => {
+      const row = document.createElement("div");
+      row.className = "goal-queue-item";
+      row.classList.toggle("current", isActive && index === currentIndex);
+      row.classList.toggle("done", Boolean(item.completed));
+      const label = document.createElement("span");
+      label.textContent = item.label;
+      row.append(label);
+      if (!isActive) {
+        const remove = document.createElement("button");
+        remove.type = "button";
+        remove.textContent = "Retirer";
+        remove.addEventListener("click", () => removeQueuedGoal(index));
+        row.append(remove);
+      }
+      return row;
+    }));
+    if (startButton) startButton.classList.toggle("hidden", isActive);
+    if (skipButton) skipButton.classList.toggle("hidden", !isActive || Boolean(state.activeChallenge));
+    if (stopButton) stopButton.classList.toggle("hidden", !isActive);
+    updateGoalSelectionButtons();
+  }
+
+  function updateGoalSelectionButtons() {
+    document.querySelectorAll("[data-complete]").forEach((button) => {
+      const domainPanel = button.closest(".domain-panel");
+      const domain = button.dataset.goalDomain || button.dataset.homeTask || domainPanel?.id?.replace("domain-", "") || state.selectedDomain;
+      button.classList.toggle("selected", isGoalQueued(button.dataset.complete, domain));
+    });
+  }
+
+  function openChallengeSetup(label, domain = state.selectedDomain || state.currentHomeDomain || "", options = {}) {
     if (!label) return;
     if (state.activeChallenge && !state.activeChallenge.rewardedAt) {
       showToast("Un défi est déjà en cours.");
@@ -273,6 +450,7 @@
       startedAt: null,
       endsAt: null,
       status: "setup",
+      fromQueue: Boolean(options.fromQueue),
       rewardedAt: null
     };
     saveState();
@@ -329,6 +507,7 @@
     state.activeChallenge = null;
     saveState();
     renderChallengeTimer();
+    renderGoalQueue();
   }
 
   function startChallengeTicker() {
@@ -389,6 +568,8 @@
     isCompletingChallenge = false;
     saveState();
     renderChallengeTimer();
+    renderGoalQueue();
+    if (challenge.fromQueue) completeQueueGoal();
   }
 
   function formatRemaining(ms) {
@@ -1410,12 +1591,18 @@
     });
     document.querySelectorAll("[data-complete]").forEach((button) => {
       button.addEventListener("click", () => {
+        const domainPanel = button.closest(".domain-panel");
+        const panelDomain = domainPanel?.id?.replace("domain-", "") || "";
         if (button.dataset.homeTask) {
           state.selectedDomain = button.dataset.homeTask;
           saveState();
           renderHomeSuggestion();
+        } else if (panelDomain) {
+          state.selectedDomain = panelDomain;
+          saveState();
         }
-        openChallengeSetup(button.dataset.complete, state.selectedDomain);
+        button.dataset.goalDomain = state.selectedDomain;
+        toggleGoalSelection(button.dataset.complete, state.selectedDomain);
       });
     });
 
@@ -1425,6 +1612,9 @@
     bindById("start-challenge", "click", startChallenge);
     bindById("cancel-challenge", "click", cancelChallenge);
     bindById("finish-challenge", "click", completeActiveChallenge);
+    bindById("start-goal-queue", "click", startGoalQueue);
+    bindById("skip-goal", "click", skipQueueGoal);
+    bindById("stop-goal-queue", "click", () => stopGoalQueue());
     bindById("choose-domain-button", "click", () => showView("domains"));
     $("quick-add-button")?.addEventListener("click", openQuickAdd);
     $("close-quick-add")?.addEventListener("click", closeQuickAdd);
@@ -1510,6 +1700,7 @@
     renderOnboarding();
     renderInstallInvite();
     renderVersionInfo();
+    renderGoalQueue();
     renderChallengeTimer();
     resumeChallengeTimer();
     scheduleAgendaReminders();

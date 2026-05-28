@@ -376,6 +376,23 @@
         <button id="save-checkin" class="primary wide" type="button">Valider</button>
       </article>
     </section>
+    <section id="goal-queue-panel" class="goal-queue-panel hidden" aria-live="polite">
+      <article class="goal-queue-card">
+        <div class="card-header">
+          <div>
+            <p class="step">Série</p>
+            <h2>Objectifs sélectionnés</h2>
+          </div>
+          <span id="goal-queue-count" class="small-muted">0</span>
+        </div>
+        <div id="goal-queue-list" class="goal-queue-list"></div>
+        <div class="button-row">
+          <button id="start-goal-queue" class="primary" type="button">Commencer la série</button>
+          <button id="skip-goal" class="secondary hidden" type="button">Passer cet objectif</button>
+          <button id="stop-goal-queue" class="secondary hidden" type="button">Arrêter la série</button>
+        </div>
+      </article>
+    </section>
     <section id="install-invite" class="install-invite hidden" aria-live="polite">
       <article class="install-card">
         <div>
