@@ -998,171 +998,108 @@ textarea {
   grid-template-columns: repeat(3, 1fr);
 }
 
-.goal-queue-panel {
-  bottom: calc(76px + max(12px, env(safe-area-inset-bottom)));
-  left: max(16px, calc((100% - 488px) / 2));
-  position: fixed;
-  right: max(16px, calc((100% - 488px) / 2));
-  z-index: 6;
+.goal-selection-inline {
+  align-items: center;
+  border-top: 1px solid var(--border);
+  display: flex;
+  gap: 10px;
+  justify-content: space-between;
+  margin-top: 14px;
+  padding-top: 12px;
 }
 
-.goal-queue-panel[data-status="active"] {
-  bottom: calc(314px + max(12px, env(safe-area-inset-bottom)));
+.goal-selection-summary {
+  color: var(--brand);
+  font-size: 0.92rem;
+  font-weight: 700;
+  line-height: 1.3;
+  margin: 0;
+  min-width: 0;
 }
 
-.goal-queue-card {
+.goal-selection-inline .primary,
+.goal-selection-dock .primary {
+  flex: 0 0 auto;
+  min-height: 44px;
+  padding-inline: 14px;
+  white-space: nowrap;
+}
+
+.goal-selection-dock {
   align-items: center;
   background: rgba(255, 253, 248, 0.98);
   border: 1px solid var(--border);
   border-radius: 16px;
+  bottom: calc(76px + max(12px, env(safe-area-inset-bottom)));
   box-shadow: var(--shadow);
   display: flex;
   gap: 10px;
   justify-content: space-between;
+  left: max(16px, calc((100% - 488px) / 2));
   padding: 10px 12px;
+  position: fixed;
+  right: max(16px, calc((100% - 488px) / 2));
+  z-index: 5;
 }
 
-.goal-queue-card h2 {
-  font-size: 1rem;
-  margin-bottom: 0;
+.goal-queue-active-bar {
+  align-items: center;
+  background: rgba(255, 253, 248, 0.98);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  bottom: calc(76px + max(12px, env(safe-area-inset-bottom)));
+  box-shadow: var(--shadow);
+  display: flex;
+  gap: 10px;
+  justify-content: space-between;
+  left: max(16px, calc((100% - 488px) / 2));
+  padding: 10px 12px;
+  position: fixed;
+  right: max(16px, calc((100% - 488px) / 2));
+  z-index: 5;
 }
 
-.goal-queue-card .step {
-  margin-bottom: 2px;
+body.goal-series-active .goal-queue-active-bar {
+  bottom: calc(300px + max(12px, env(safe-area-inset-bottom)));
 }
 
-.goal-queue-card .card-header {
-  flex: 1;
-  margin-bottom: 0;
+.goal-queue-active-copy {
   min-width: 0;
 }
 
-.goal-queue-card .small-muted {
-  display: block;
-  font-size: 0.76rem;
-  margin-top: 2px;
-}
-
-.goal-queue-list {
-  display: grid;
-  gap: 7px;
-  max-height: 94px;
-  overflow: auto;
-  width: 100%;
-}
-
-.goal-queue-panel[data-status="active"] .goal-queue-card {
-  align-items: stretch;
-  display: grid;
-}
-
-.goal-queue-item {
-  align-items: center;
-  background: var(--soft);
-  border-radius: 12px;
-  color: var(--ink);
-  display: flex;
-  gap: 8px;
-  justify-content: space-between;
-  min-height: 40px;
-  padding: 8px 10px;
-}
-
-.goal-queue-item.current {
-  border-left: 4px solid var(--brand);
+.goal-queue-active-step {
+  color: var(--brand-light);
+  font-size: 0.72rem;
   font-weight: 700;
+  letter-spacing: 0.08em;
+  margin: 0 0 2px;
+  text-transform: uppercase;
 }
 
-.goal-queue-item.done {
-  color: var(--muted);
-  text-decoration: line-through;
-}
-
-.goal-queue-item button {
-  background: transparent;
-  border: 0;
-  color: var(--danger);
-  font-size: 0.82rem;
-  min-height: 34px;
-  padding: 4px;
-}
-
-.goal-queue-card .button-row {
-  flex: 0 0 auto;
-  grid-template-columns: 1fr;
-  margin-top: 0;
-  min-width: 132px;
-}
-
-.goal-queue-panel[data-status="active"] .button-row {
-  grid-template-columns: 1fr 1fr;
-}
-
-.goal-queue-card .button-row button {
-  min-height: 42px;
-  padding: 8px 10px;
-}
-
-.series-success-panel {
-  align-items: flex-end;
-  background: rgba(23, 39, 33, 0.42);
-  display: flex;
-  inset: 0;
-  justify-content: center;
-  padding: max(16px, env(safe-area-inset-top)) 16px calc(88px + env(safe-area-inset-bottom));
-  position: fixed;
-  z-index: 9;
-}
-
-.series-success-card {
-  animation: appear 200ms ease;
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 22px;
-  box-shadow: var(--shadow);
-  display: grid;
-  gap: 10px;
-  max-width: 420px;
-  padding: 18px;
-  text-align: center;
-  width: 100%;
-}
-
-.series-success-card h2 {
-  margin-bottom: 4px;
-}
-
-.series-success-line {
-  color: var(--muted);
-  margin: 0;
-}
-
-.series-success-coins {
-  color: var(--brand);
-  font-size: 1.35rem;
-  font-weight: 800;
-  margin: 0;
-}
-
-.series-success-total {
-  background: var(--soft);
-  border-radius: 14px;
-  color: var(--ink);
+.goal-queue-active-label {
   font-size: 0.95rem;
   font-weight: 700;
-  margin: 0 0 6px;
-  padding: 10px 12px;
+  line-height: 1.25;
+  margin: 0;
 }
 
-.series-success-shop {
-  justify-self: center;
+.goal-queue-active-actions {
+  display: flex;
+  flex: 0 0 auto;
+  gap: 7px;
+}
+
+.goal-queue-active-actions button {
   min-height: 40px;
+  padding: 8px 10px;
 }
 
-body.series-success-open .challenge-panel,
-body.series-success-open .goal-queue-panel,
-body.series-success-open .checkin-panel {
-  display: none !important;
+body.goal-selecting-dock .app-shell {
+  padding-bottom: calc(104px + env(safe-area-inset-bottom));
+}
+
+body.goal-series-active.challenge-open .app-shell {
+  padding-bottom: calc(360px + env(safe-area-inset-bottom));
 }
 
 .challenge-panel {
@@ -1170,7 +1107,7 @@ body.series-success-open .checkin-panel {
   left: max(16px, calc((100% - 488px) / 2));
   position: fixed;
   right: max(16px, calc((100% - 488px) / 2));
-  z-index: 4;
+  z-index: 6;
 }
 
 .challenge-card {
