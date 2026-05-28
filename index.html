@@ -62,6 +62,10 @@
             <p id="selected-domain-subtitle" class="muted">Choisis une action.</p>
             <div id="selected-domain-missions" class="task-list"></div>
             <button id="add-selected-goal" class="add-small" type="button">Ajouter un objectif</button>
+            <div id="goal-selection-inline" class="goal-selection-inline hidden" aria-live="polite">
+              <p id="goal-selection-inline-summary" class="goal-selection-summary">0 objectif sélectionné</p>
+              <button id="start-goal-queue-inline" class="primary" type="button">Commencer la série</button>
+            </div>
           </article>
 
           <article id="checkin-history-card" class="checkin-history-card hidden" aria-live="polite">
@@ -376,22 +380,19 @@
         <button id="save-checkin" class="primary wide" type="button">Valider</button>
       </article>
     </section>
-    <section id="goal-queue-panel" class="goal-queue-panel hidden" aria-live="polite">
-      <article class="goal-queue-card">
-        <div class="card-header">
-          <div>
-            <p class="step">Série</p>
-            <h2 id="goal-queue-title">Objectifs sélectionnés</h2>
-          </div>
-          <span id="goal-queue-count" class="small-muted">0</span>
-        </div>
-        <div id="goal-queue-list" class="goal-queue-list"></div>
-        <div class="button-row">
-          <button id="start-goal-queue" class="primary" type="button">Commencer la série</button>
-          <button id="skip-goal" class="secondary hidden" type="button">Passer cet objectif</button>
-          <button id="stop-goal-queue" class="secondary hidden" type="button">Arrêter la série</button>
-        </div>
-      </article>
+    <section id="goal-selection-dock" class="goal-selection-dock hidden" aria-live="polite">
+      <p id="goal-selection-dock-summary" class="goal-selection-summary">0 objectif sélectionné</p>
+      <button id="start-goal-queue" class="primary" type="button">Commencer la série</button>
+    </section>
+    <section id="goal-queue-active-bar" class="goal-queue-active-bar hidden" aria-live="polite">
+      <div class="goal-queue-active-copy">
+        <p id="goal-queue-active-step" class="goal-queue-active-step">Étape 1 / 1</p>
+        <p id="goal-queue-active-label" class="goal-queue-active-label">Objectif</p>
+      </div>
+      <div class="goal-queue-active-actions">
+        <button id="skip-goal" class="secondary" type="button">Passer</button>
+        <button id="stop-goal-queue" class="secondary" type="button">Arrêter</button>
+      </div>
     </section>
     <section id="install-invite" class="install-invite hidden" aria-live="polite">
       <article class="install-card">

@@ -382,51 +382,79 @@
     showToast(message);
   }
 
+  function goalSelectionSummary(count) {
+    if (!count) return "";
+    return `${count} objectif${count > 1 ? "s" : ""} sélectionné${count > 1 ? "s" : ""}`;
+  }
+
+  function isSelectedDomainVisible() {
+    const card = $("selected-domain-card");
+    return Boolean(card && !card.classList.contains("hidden"));
+  }
+
+  function shouldShowChallengePanel() {
+    if (!state.activeChallenge) return false;
+    const items = queuedItems();
+    if (items.length && !state.goalQueue?.active) return false;
+    return true;
+  }
+
   function renderGoalQueue() {
-    const panel = $("goal-queue-panel");
-    const list = $("goal-queue-list");
-    const count = $("goal-queue-count");
-    const title = $("goal-queue-title");
-    const startButton = $("start-goal-queue");
-    const skipButton = $("skip-goal");
-    const stopButton = $("stop-goal-queue");
     const items = queuedItems();
     const isActive = Boolean(state.goalQueue?.active);
-    if (!panel || !list) return;
-    if (!items.length) {
-      panel.classList.add("hidden");
-      list.replaceChildren();
-      updateGoalSelectionButtons();
-      return;
+    const count = items.length;
+    const summaryText = goalSelectionSummary(count);
+
+    const showInlineSelection = count > 0 && !isActive && isSelectedDomainVisible();
+    const showDockSelection = count > 0 && !isActive && !showInlineSelection;
+
+    document.body.classList.toggle("goal-selecting-dock", showDockSelection);
+    document.body.classList.toggle("goal-series-active", count > 0 && isActive);
+
+    const inline = $("goal-selection-inline");
+    const inlineSummary = $("goal-selection-inline-summary");
+    const inlineStart = $("start-goal-queue-inline");
+    const dock = $("goal-selection-dock");
+    const dockSummary = $("goal-selection-dock-summary");
+    const dockStart = $("start-goal-queue");
+
+    if (inline) inline.classList.toggle("hidden", !showInlineSelection);
+    if (dock) dock.classList.toggle("hidden", !showDockSelection);
+    if (inlineSummary) inlineSummary.textContent = summaryText;
+    if (dockSummary) dockSummary.textContent = summaryText;
+    if (inlineStart) inlineStart.disabled = count === 0;
+    if (dockStart) dockStart.disabled = count === 0;
+
+    const activeBar = $("goal-queue-active-bar");
+    const activeStep = $("goal-queue-active-step");
+    const activeLabel = $("goal-queue-active-label");
+    const skipButton = $("skip-goal");
+    const showActiveBar = isActive && count > 0;
+
+    if (activeBar) activeBar.classList.toggle("hidden", !showActiveBar);
+    if (showActiveBar) {
+      const currentIndex = state.goalQueue.currentIndex || 0;
+      const current = items[currentIndex];
+      if (activeStep) activeStep.textContent = `Étape ${currentIndex + 1} / ${count}`;
+      if (activeLabel) activeLabel.textContent = current?.label || "";
+      if (skipButton) skipButton.classList.toggle("hidden", Boolean(state.activeChallenge));
     }
-    panel.classList.remove("hidden");
-    panel.dataset.status = isActive ? "active" : "setup";
-    const currentIndex = state.goalQueue?.currentIndex || 0;
-    if (title) title.textContent = isActive ? "Série en cours" : `${items.length} objectif${items.length > 1 ? "s" : ""} sélectionné${items.length > 1 ? "s" : ""}`;
-    if (count) count.textContent = isActive ? `${currentIndex + 1} / ${items.length}` : "Touchez à nouveau pour retirer";
-    const visibleItems = isActive ? items : [];
-    list.classList.toggle("hidden", !isActive);
-    list.replaceChildren(...visibleItems.map((item, index) => {
-      const row = document.createElement("div");
-      row.className = "goal-queue-item";
-      row.classList.toggle("current", isActive && index === currentIndex);
-      row.classList.toggle("done", Boolean(item.completed));
-      const label = document.createElement("span");
-      label.textContent = item.label;
-      row.append(label);
-      return row;
-    }));
-    if (startButton) startButton.classList.toggle("hidden", isActive);
-    if (skipButton) skipButton.classList.toggle("hidden", !isActive || Boolean(state.activeChallenge));
-    if (stopButton) stopButton.classList.toggle("hidden", !isActive);
+
     updateGoalSelectionButtons();
+    renderChallengeTimer();
   }
 
   function updateGoalSelectionButtons() {
     document.querySelectorAll("[data-complete]").forEach((button) => {
       const domainPanel = button.closest(".domain-panel");
       const domain = button.dataset.goalDomain || button.dataset.homeTask || domainPanel?.id?.replace("domain-", "") || state.selectedDomain;
-      button.classList.toggle("selected", isGoalQueued(button.dataset.complete, domain));
+      const selected = isGoalQueued(button.dataset.complete, domain);
+      button.classList.toggle("selected", selected);
+      button.setAttribute("aria-pressed", selected ? "true" : "false");
+    });
+    document.querySelectorAll("#selected-domain-missions button").forEach((button) => {
+      const selected = button.classList.contains("selected");
+      button.setAttribute("aria-pressed", selected ? "true" : "false");
     });
   }
 
@@ -452,7 +480,9 @@
     };
     saveState();
     renderChallengeTimer();
-    $("challenge-panel")?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    if (shouldShowChallengePanel()) {
+      $("challenge-panel")?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    }
   }
 
   function setChallengeDuration(minutes) {
@@ -597,7 +627,10 @@
     const message = $("challenge-message");
     const challenge = state.activeChallenge;
 
-    if (!panel || !challenge) {
+    const challengeVisible = Boolean(panel && challenge && shouldShowChallengePanel());
+    document.body.classList.toggle("challenge-open", challengeVisible);
+
+    if (!challengeVisible) {
       panel?.classList.add("hidden");
       return;
     }
@@ -1071,9 +1104,12 @@
     if (!list) return;
     const selectedDate = selectedAgendaDate();
     state.agendaDate = selectedDate;
-    $("agenda-date").value = selectedDate;
-    $("agenda-day-label").textContent = agendaDateLabel(selectedDate);
-    $("agenda-month-label").textContent = agendaMonthLabel(selectedDate);
+    const agendaDateInput = $("agenda-date");
+    const dayLabel = $("agenda-day-label");
+    const monthLabel = $("agenda-month-label");
+    if (agendaDateInput) agendaDateInput.value = selectedDate;
+    if (dayLabel) dayLabel.textContent = agendaDateLabel(selectedDate);
+    if (monthLabel) monthLabel.textContent = agendaMonthLabel(selectedDate);
     renderAgendaCalendar(selectedDate);
     const items = agendaItemsForSelectedDate();
     const count = $("agenda-count");
@@ -1361,9 +1397,12 @@
   }
 
   function renderSettings() {
-    $("notify-important").checked = state.notifications.important;
-    $("notify-summary").checked = state.notifications.summary;
-    $("notification-status").textContent = notificationPermissionText();
+    const notifyImportant = $("notify-important");
+    const notifySummary = $("notify-summary");
+    const notificationStatus = $("notification-status");
+    if (notifyImportant) notifyImportant.checked = state.notifications.important;
+    if (notifySummary) notifySummary.checked = state.notifications.summary;
+    if (notificationStatus) notificationStatus.textContent = notificationPermissionText();
     renderInstallState();
   }
 
@@ -1610,6 +1649,7 @@
     bindById("cancel-challenge", "click", cancelChallenge);
     bindById("finish-challenge", "click", completeActiveChallenge);
     bindById("start-goal-queue", "click", startGoalQueue);
+    bindById("start-goal-queue-inline", "click", startGoalQueue);
     bindById("skip-goal", "click", skipQueueGoal);
     bindById("stop-goal-queue", "click", () => stopGoalQueue());
     bindById("choose-domain-button", "click", () => showView("domains"));
