@@ -24,6 +24,18 @@
   };
 
   const COINS_PER_TASK = 5;
+  const CHALLENGE_DURATIONS = [2, 5, 8, 12, 15];
+  const checkInChoices = [
+    "Je travaille",
+    "Je procrastine",
+    "Je me repose",
+    "Je suis concentré",
+    "Je suis perdu",
+    "Je fais du ménage",
+    "Je joue",
+    "Je suis fatigué",
+    "Je suis motivé"
+  ];
   const defaultShopRewards = [
     { name: "Gaming", cost: 35, duration: "20 min" },
     { name: "Film", cost: 70, duration: "1 film" },
@@ -81,31 +93,53 @@
     customGoals: {},
     ideas: [],
     quickItems: [],
+    checkIns: [],
+    goalQueue: { items: [], active: false, currentIndex: 0 },
     agenda: [],
     agendaDate: "",
+    activeChallenge: null,
     notifications: { important: false, summary: false }
   };
 
   let state = loadState();
   let toastTimer;
   let quickType = "Tâche";
+  let selectedCheckIn = "Je travaille";
+  let selectedEnergy = "moyenne";
   let deferredInstallPrompt = null;
   let emergencyIndex = 0;
   let agendaReminderTimers = [];
+  let challengeTimerId = null;
+  let challengeCountdownId = null;
+  let isCompletingChallenge = false;
+
+  function cloneState(value) {
+    if (typeof structuredClone === "function") return structuredClone(value);
+    return JSON.parse(JSON.stringify(value));
+  }
 
   function loadState() {
     try {
       const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || "null");
-      if (!saved) return structuredClone(defaultState);
+      if (!saved) return cloneState(defaultState);
       const nextState = {
-        ...structuredClone(defaultState),
+        ...cloneState(defaultState),
         ...saved,
         progress: { ...defaultState.progress, ...saved.progress },
         customGoals: { ...defaultState.customGoals, ...saved.customGoals },
         ideas: Array.isArray(saved.ideas) ? saved.ideas : [],
         rewards: Array.isArray(saved.rewards) ? saved.rewards : [],
+        checkIns: Array.isArray(saved.checkIns) ? saved.checkIns : [],
+        goalQueue: saved.goalQueue && typeof saved.goalQueue === "object"
+          ? {
+            items: Array.isArray(saved.goalQueue.items) ? saved.goalQueue.items : [],
+            active: Boolean(saved.goalQueue.active),
+            currentIndex: Number.isFinite(saved.goalQueue.currentIndex) ? saved.goalQueue.currentIndex : 0
+          }
+          : cloneState(defaultState.goalQueue),
         agenda: Array.isArray(saved.agenda) ? saved.agenda : [],
         agendaDate: typeof saved.agendaDate === "string" ? saved.agendaDate : "",
+        activeChallenge: saved.activeChallenge && typeof saved.activeChallenge === "object" ? saved.activeChallenge : null,
         coins: Number.isFinite(saved.coins) ? saved.coins : (Number.isFinite(saved.wins) ? saved.wins * COINS_PER_TASK : 0),
         notifications: { ...defaultState.notifications, ...saved.notifications }
       };
@@ -114,7 +148,7 @@
       }
       return nextState;
     } catch (error) {
-      return structuredClone(defaultState);
+      return cloneState(defaultState);
     }
   }
 
@@ -199,6 +233,7 @@
       const button = document.createElement("button");
       button.type = "button";
       button.textContent = mission.label;
+      button.classList.toggle("selected", isGoalQueued(mission.label, domain));
       button.addEventListener("click", () => {
         if (mission.action === "open-domain") {
           openDomain(domain);
@@ -206,7 +241,7 @@
         }
         state.selectedDomain = domain;
         saveState();
-        completeTask(mission.label);
+        toggleGoalSelection(mission.label, domain);
       });
       return button;
     }));
@@ -230,6 +265,440 @@
     $("selected-domain-card")?.classList.add("hidden");
   }
 
+  function goalKey(label, domain) {
+    return `${domain || "general"}::${label}`;
+  }
+
+  function queuedItems() {
+    const queue = state.goalQueue || { items: [], active: false, currentIndex: 0 };
+    return Array.isArray(queue.items) ? queue.items : [];
+  }
+
+  function currentQueueItem() {
+    const items = queuedItems();
+    return items[state.goalQueue?.currentIndex || 0] || null;
+  }
+
+  function isGoalQueued(label, domain) {
+    return queuedItems().some((item) => goalKey(item.label, item.domain) === goalKey(label, domain));
+  }
+
+  function toggleGoalSelection(label, domain = state.selectedDomain || state.currentHomeDomain || "") {
+    if (!label) return;
+    if (state.goalQueue?.active) {
+      showToast("La série est déjà en cours.");
+      renderGoalQueue();
+      return;
+    }
+    const key = goalKey(label, domain);
+    const items = queuedItems();
+    const exists = items.some((item) => goalKey(item.label, item.domain) === key);
+    state.goalQueue = {
+      active: false,
+      currentIndex: 0,
+      items: exists
+        ? items.filter((item) => goalKey(item.label, item.domain) !== key)
+        : [...items, { label, domain, completed: false }]
+    };
+    state.selectedDomain = domain || state.selectedDomain;
+    saveState();
+    renderGoalQueue();
+    renderSelectedDomain();
+    showToast(exists ? "Objectif retiré." : "Objectif ajouté à la série.");
+  }
+
+  function removeQueuedGoal(index) {
+    if (state.goalQueue?.active) return;
+    state.goalQueue.items = queuedItems().filter((_, itemIndex) => itemIndex !== index);
+    saveState();
+    renderGoalQueue();
+    renderSelectedDomain();
+  }
+
+  function startGoalQueue() {
+    const items = queuedItems();
+    if (!items.length || state.activeChallenge) return;
+    state.goalQueue = { items, active: true, currentIndex: 0 };
+    saveState();
+    renderGoalQueue();
+    launchCurrentQueueGoal();
+  }
+
+  function launchCurrentQueueGoal() {
+    const item = currentQueueItem();
+    if (!state.goalQueue?.active || !item) return;
+    openChallengeSetup(item.label, item.domain, { fromQueue: true });
+    showToast(`Étape ${state.goalQueue.currentIndex + 1} / ${queuedItems().length} : ${item.label}`);
+  }
+
+  function completeQueueGoal() {
+    if (!state.goalQueue?.active) return false;
+    const items = queuedItems();
+    const currentIndex = state.goalQueue.currentIndex || 0;
+    if (!items[currentIndex]) return false;
+    items[currentIndex] = { ...items[currentIndex], completed: true };
+    const nextIndex = currentIndex + 1;
+    if (nextIndex >= items.length) {
+      state.goalQueue = { items: [], active: false, currentIndex: 0 };
+      saveState();
+      renderGoalQueue();
+      showToast("Série terminée. Belle avancée.");
+      return true;
+    }
+    state.goalQueue = { items, active: true, currentIndex: nextIndex };
+    saveState();
+    renderGoalQueue();
+    const next = items[nextIndex];
+    showToast(`Bravo. Prochaine étape : ${next.label}.`);
+    window.setTimeout(() => {
+      if (!state.activeChallenge && state.goalQueue?.active) launchCurrentQueueGoal();
+    }, 900);
+    return true;
+  }
+
+  function skipQueueGoal() {
+    if (!state.goalQueue?.active || state.activeChallenge) return;
+    const items = queuedItems();
+    const nextIndex = (state.goalQueue.currentIndex || 0) + 1;
+    if (nextIndex >= items.length) {
+      stopGoalQueue("Correct. Série arrêtée.");
+      return;
+    }
+    state.goalQueue.currentIndex = nextIndex;
+    saveState();
+    renderGoalQueue();
+    launchCurrentQueueGoal();
+  }
+
+  function stopGoalQueue(message = "Correct. Tu peux reprendre plus tard.") {
+    window.clearInterval(challengeCountdownId);
+    window.clearInterval(challengeTimerId);
+    state.activeChallenge = null;
+    state.goalQueue = { items: [], active: false, currentIndex: 0 };
+    saveState();
+    renderGoalQueue();
+    renderChallengeTimer();
+    renderSelectedDomain();
+    showToast(message);
+  }
+
+  function goalSelectionSummary(count) {
+    if (!count) return "";
+    return `${count} objectif${count > 1 ? "s" : ""} sélectionné${count > 1 ? "s" : ""}`;
+  }
+
+  function isSelectedDomainVisible() {
+    const card = $("selected-domain-card");
+    return Boolean(card && !card.classList.contains("hidden"));
+  }
+
+  function shouldShowChallengePanel() {
+    if (!state.activeChallenge) return false;
+    const items = queuedItems();
+    if (items.length && !state.goalQueue?.active) return false;
+    return true;
+  }
+
+  function renderGoalQueue() {
+    const items = queuedItems();
+    const isActive = Boolean(state.goalQueue?.active);
+    const count = items.length;
+    const summaryText = goalSelectionSummary(count);
+
+    const showInlineSelection = count > 0 && !isActive && isSelectedDomainVisible();
+    const showDockSelection = count > 0 && !isActive && !showInlineSelection;
+
+    document.body.classList.toggle("goal-selecting-dock", showDockSelection);
+    document.body.classList.toggle("goal-series-active", count > 0 && isActive);
+
+    const inline = $("goal-selection-inline");
+    const inlineSummary = $("goal-selection-inline-summary");
+    const inlineStart = $("start-goal-queue-inline");
+    const dock = $("goal-selection-dock");
+    const dockSummary = $("goal-selection-dock-summary");
+    const dockStart = $("start-goal-queue");
+
+    if (inline) inline.classList.toggle("hidden", !showInlineSelection);
+    if (dock) dock.classList.toggle("hidden", !showDockSelection);
+    if (inlineSummary) inlineSummary.textContent = summaryText;
+    if (dockSummary) dockSummary.textContent = summaryText;
+    if (inlineStart) inlineStart.disabled = count === 0;
+    if (dockStart) dockStart.disabled = count === 0;
+
+    const activeBar = $("goal-queue-active-bar");
+    const activeStep = $("goal-queue-active-step");
+    const activeLabel = $("goal-queue-active-label");
+    const skipButton = $("skip-goal");
+    const showActiveBar = isActive && count > 0;
+
+    if (activeBar) activeBar.classList.toggle("hidden", !showActiveBar);
+    if (showActiveBar) {
+      const currentIndex = state.goalQueue.currentIndex || 0;
+      const current = items[currentIndex];
+      if (activeStep) activeStep.textContent = `Étape ${currentIndex + 1} / ${count}`;
+      if (activeLabel) activeLabel.textContent = current?.label || "";
+      if (skipButton) skipButton.classList.toggle("hidden", Boolean(state.activeChallenge));
+    }
+
+    updateGoalSelectionButtons();
+    renderChallengeTimer();
+  }
+
+  function updateGoalSelectionButtons() {
+    document.querySelectorAll("[data-complete]").forEach((button) => {
+      const domainPanel = button.closest(".domain-panel");
+      const domain = button.dataset.goalDomain || button.dataset.homeTask || domainPanel?.id?.replace("domain-", "") || state.selectedDomain;
+      const selected = isGoalQueued(button.dataset.complete, domain);
+      button.classList.toggle("selected", selected);
+      button.setAttribute("aria-pressed", selected ? "true" : "false");
+    });
+    document.querySelectorAll("#selected-domain-missions button").forEach((button) => {
+      const selected = button.classList.contains("selected");
+      button.setAttribute("aria-pressed", selected ? "true" : "false");
+    });
+  }
+
+  function openChallengeSetup(label, domain = state.selectedDomain || state.currentHomeDomain || "", options = {}) {
+    if (!label) return;
+    if (state.activeChallenge && !state.activeChallenge.rewardedAt) {
+      showToast("Un défi est déjà en cours.");
+      renderChallengeTimer();
+      return;
+    }
+    state.selectedDomain = domain || state.selectedDomain;
+    state.activeChallenge = {
+      id: `${Date.now()}-${Math.random().toString(36).slice(2)}`,
+      label,
+      domain: state.selectedDomain,
+      durationMinutes: 8,
+      durationMs: 8 * 60000,
+      startedAt: null,
+      endsAt: null,
+      status: "setup",
+      fromQueue: Boolean(options.fromQueue),
+      rewardedAt: null
+    };
+    saveState();
+    renderChallengeTimer();
+    if (shouldShowChallengePanel()) {
+      $("challenge-panel")?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    }
+  }
+
+  function setChallengeDuration(minutes) {
+    const duration = Number(minutes);
+    if (!state.activeChallenge || !Number.isFinite(duration)) return;
+    state.activeChallenge.durationMinutes = duration;
+    state.activeChallenge.durationMs = duration * 60000;
+    saveState();
+    renderChallengeTimer();
+  }
+
+  function startChallenge() {
+    const challenge = state.activeChallenge;
+    if (!challenge || challenge.status !== "setup") return;
+    window.clearInterval(challengeCountdownId);
+    playStartTone();
+    const now = Date.now();
+    let count = 3;
+    state.activeChallenge = {
+      ...challenge,
+      startedAt: now,
+      endsAt: now + challenge.durationMs,
+      status: "countdown"
+    };
+    saveState();
+    renderChallengeTimer(count);
+    challengeCountdownId = window.setInterval(() => {
+      count -= 1;
+      if (count <= 0) {
+        window.clearInterval(challengeCountdownId);
+        state.activeChallenge = {
+          ...state.activeChallenge,
+          status: "running"
+        };
+        saveState();
+        startChallengeTicker();
+        renderChallengeTimer();
+        showToast("GO. Une chose à la fois.");
+        return;
+      }
+      renderChallengeTimer(count);
+    }, 700);
+  }
+
+  function cancelChallenge() {
+    if (!state.activeChallenge) return;
+    window.clearInterval(challengeCountdownId);
+    window.clearInterval(challengeTimerId);
+    state.activeChallenge = null;
+    saveState();
+    renderChallengeTimer();
+    renderGoalQueue();
+  }
+
+  function startChallengeTicker() {
+    window.clearInterval(challengeTimerId);
+    challengeTimerId = window.setInterval(updateChallengeTime, 1000);
+    updateChallengeTime();
+  }
+
+  function resumeChallengeTimer() {
+    if (state.activeChallenge?.status === "countdown") {
+      state.activeChallenge.status = "running";
+      saveState();
+    }
+    if (state.activeChallenge?.status === "running") startChallengeTicker();
+  }
+
+  function updateChallengeTime() {
+    const challenge = state.activeChallenge;
+    if (!challenge) {
+      window.clearInterval(challengeTimerId);
+      return;
+    }
+    if (challenge.status === "running" && Date.now() >= challenge.endsAt) {
+      state.activeChallenge.status = "done";
+      window.clearInterval(challengeTimerId);
+      saveState();
+      notifyChallengeDone();
+    }
+    renderChallengeTimer();
+  }
+
+  function notifyChallengeDone() {
+    if ("vibrate" in navigator) navigator.vibrate([25, 40, 25]);
+    if ("Notification" in window && Notification.permission === "granted") {
+      new Notification("Défi terminé", { body: "Belle présence. Tu peux valider quand c'est fait." });
+    }
+    showToast("Défi terminé. Tu as tenu le cap.");
+  }
+
+  function completeActiveChallenge() {
+    const challenge = state.activeChallenge;
+    if (!challenge || !["running", "done"].includes(challenge.status) || challenge.rewardedAt || isCompletingChallenge) return;
+    isCompletingChallenge = true;
+    const button = $("finish-challenge");
+    if (button) button.disabled = true;
+    window.clearInterval(challengeCountdownId);
+    window.clearInterval(challengeTimerId);
+    const remainingMs = Math.max(0, (challenge.endsAt || Date.now()) - Date.now());
+    const successMessage = remainingMs > 0
+      ? `Bravo ! Tu as terminé avec encore ${formatRemainingText(remainingMs)}.`
+      : "Bravo ! Défi terminé avec calme.";
+    state.activeChallenge.rewardedAt = Date.now();
+    state.activeChallenge.status = "completed";
+    state.selectedDomain = challenge.domain;
+    saveState();
+    completeTask(challenge.label, successMessage);
+    state.activeChallenge = null;
+    isCompletingChallenge = false;
+    saveState();
+    renderChallengeTimer();
+    renderGoalQueue();
+    if (challenge.fromQueue) completeQueueGoal();
+  }
+
+  function formatRemaining(ms) {
+    const totalSeconds = Math.max(0, Math.ceil(ms / 1000));
+    const minutes = Math.floor(totalSeconds / 60);
+    const seconds = totalSeconds % 60;
+    return `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
+  }
+
+  function formatRemainingText(ms) {
+    const totalSeconds = Math.max(0, Math.ceil(ms / 1000));
+    const minutes = Math.floor(totalSeconds / 60);
+    const seconds = totalSeconds % 60;
+    if (minutes && seconds) return `${minutes} min ${seconds} s`;
+    if (minutes) return `${minutes} min`;
+    return `${seconds} seconde${seconds > 1 ? "s" : ""}`;
+  }
+
+  function renderChallengeTimer(countdownValue = null) {
+    const panel = $("challenge-panel");
+    const title = $("challenge-title");
+    const durationGroup = $("challenge-durations");
+    const readyButton = $("start-challenge");
+    const cancelButton = $("cancel-challenge");
+    const finishButton = $("finish-challenge");
+    const time = $("challenge-time");
+    const progress = $("challenge-progress");
+    const message = $("challenge-message");
+    const challenge = state.activeChallenge;
+
+    const challengeVisible = Boolean(panel && challenge && shouldShowChallengePanel());
+    document.body.classList.toggle("challenge-open", challengeVisible);
+
+    if (!challengeVisible) {
+      panel?.classList.add("hidden");
+      return;
+    }
+
+    panel.classList.remove("hidden");
+    panel.dataset.status = challenge.status;
+    if (title) title.textContent = challenge.label;
+    if (durationGroup) {
+      durationGroup.classList.toggle("hidden", challenge.status !== "setup");
+      durationGroup.replaceChildren(...CHALLENGE_DURATIONS.map((duration) => {
+        const button = document.createElement("button");
+        button.type = "button";
+        button.textContent = `${duration} min`;
+        button.className = duration === challenge.durationMinutes ? "selected" : "";
+        button.addEventListener("click", () => setChallengeDuration(duration));
+        return button;
+      }));
+    }
+
+    const remaining = challenge.endsAt ? challenge.endsAt - Date.now() : challenge.durationMs;
+    const ratio = challenge.status === "running" || challenge.status === "done"
+      ? Math.max(0, Math.min(1, remaining / challenge.durationMs))
+      : 1;
+    if (progress) progress.style.setProperty("--progress", `${ratio * 360}deg`);
+    if (time) {
+      time.textContent = countdownValue
+        ? (countdownValue > 0 ? String(countdownValue) : "GO")
+        : formatRemaining(remaining);
+    }
+    if (message) {
+      message.textContent = challenge.status === "setup"
+        ? "Choisis ta durée, puis démarre doucement."
+        : challenge.status === "countdown"
+          ? "On y va."
+          : challenge.status === "done"
+            ? "Réussi. Respire, puis valide ton défi."
+            : "Reste avec cette action. C'est suffisant.";
+    }
+    if (readyButton) readyButton.classList.toggle("hidden", challenge.status !== "setup");
+    if (cancelButton) cancelButton.classList.toggle("hidden", challenge.status === "done");
+    if (finishButton) {
+      finishButton.classList.toggle("hidden", !["running", "done"].includes(challenge.status));
+      finishButton.disabled = Boolean(challenge.rewardedAt) || isCompletingChallenge;
+    }
+  }
+
+  function playStartTone() {
+    try {
+      const AudioContext = window.AudioContext || window.webkitAudioContext;
+      if (!AudioContext) return;
+      const context = new AudioContext();
+      const oscillator = context.createOscillator();
+      const gain = context.createGain();
+      oscillator.type = "sine";
+      oscillator.frequency.value = 540;
+      gain.gain.setValueAtTime(0.0001, context.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.05, context.currentTime + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.0001, context.currentTime + 0.16);
+      oscillator.connect(gain);
+      gain.connect(context.destination);
+      oscillator.start();
+      oscillator.stop(context.currentTime + 0.18);
+      window.setTimeout(() => context.close(), 300);
+    } catch (error) {
+      // Le son est bonus; le défi démarre même si le navigateur bloque l'audio.
+    }
+  }
+
   function renderHomeSuggestion() {
     const button = $("next-action");
     if (!button) return;
@@ -251,11 +720,11 @@
   }
 
   function completeEmergencyAction() {
-    completeTask(emergencyActions[emergencyIndex]);
+    openChallengeSetup(emergencyActions[emergencyIndex], "mental");
     $("emergency-card")?.classList.add("hidden");
   }
 
-  function completeTask(label) {
+  function completeTask(label, successMessage = "") {
     state.wins += 1;
     state.coins += COINS_PER_TASK;
     const domain = state.selectedDomain;
@@ -266,7 +735,9 @@
     renderDomainProgress();
     renderShop();
     const reward = pickReward(domain);
-    showToast(`${label} : fait. +${COINS_PER_TASK} pièces. ${reward}`);
+    showToast(successMessage
+      ? `${successMessage} +${COINS_PER_TASK} pièces. ${reward}`
+      : `${label} : fait. +${COINS_PER_TASK} pièces. ${reward}`);
     showView("home");
   }
 
@@ -305,6 +776,116 @@
     if (!$("quick-add-panel") || !$("quick-add-button")) return;
     $("quick-add-panel").classList.add("hidden");
     $("quick-add-button").setAttribute("aria-expanded", "false");
+  }
+
+  function openCheckIn() {
+    const panel = $("checkin-panel");
+    const button = $("checkin-button");
+    if (!panel || !button) return;
+    panel.classList.remove("hidden");
+    button.setAttribute("aria-expanded", "true");
+    renderCheckInChoices();
+    $("checkin-note")?.focus();
+  }
+
+  function closeCheckIn() {
+    const panel = $("checkin-panel");
+    const button = $("checkin-button");
+    if (!panel || !button) return;
+    panel.classList.add("hidden");
+    button.setAttribute("aria-expanded", "false");
+  }
+
+  function selectCheckIn(value) {
+    selectedCheckIn = value;
+    renderCheckInChoices();
+  }
+
+  function selectEnergy(value) {
+    selectedEnergy = value;
+    renderCheckInChoices();
+  }
+
+  function renderCheckInChoices() {
+    const choices = $("checkin-choices");
+    const energy = $("checkin-energy");
+    if (choices) {
+      choices.replaceChildren(...checkInChoices.map((choice) => {
+        const button = document.createElement("button");
+        button.type = "button";
+        button.textContent = choice;
+        button.className = choice === selectedCheckIn ? "selected" : "";
+        button.addEventListener("click", () => selectCheckIn(choice));
+        return button;
+      }));
+    }
+    if (energy) {
+      energy.replaceChildren(...["basse", "moyenne", "haute"].map((level) => {
+        const button = document.createElement("button");
+        button.type = "button";
+        button.textContent = level;
+        button.className = level === selectedEnergy ? "selected" : "";
+        button.addEventListener("click", () => selectEnergy(level));
+        return button;
+      }));
+    }
+  }
+
+  function saveCheckIn() {
+    const noteInput = $("checkin-note");
+    const note = noteInput?.value.trim() || "";
+    const checkIn = {
+      status: selectedCheckIn,
+      energy: selectedEnergy,
+      note,
+      createdAt: Date.now()
+    };
+    state.checkIns = [...state.checkIns, checkIn].slice(-40);
+    saveState();
+    if (noteInput) noteInput.value = "";
+    renderCheckInHistory();
+    closeCheckIn();
+    showToast(checkInMessage(checkIn));
+  }
+
+  function checkInMessage(checkIn) {
+    if (checkIn.status === "Je suis fatigué" || checkIn.energy === "basse") {
+      return "Tu sembles fatigué aujourd'hui. On garde ça doux.";
+    }
+    if (checkIn.status === "Je procrastine" || checkIn.status === "Je suis perdu") {
+      return "C'est noté. Une petite mission peut aider à revenir.";
+    }
+    if (checkIn.status === "Je suis concentré" || checkIn.status === "Je suis motivé") {
+      return "Belle clarté. Continue une action à la fois.";
+    }
+    return "Check-in gardé. Tu viens de reprendre le fil.";
+  }
+
+  function renderCheckInHistory() {
+    const card = $("checkin-history-card");
+    const list = $("checkin-history");
+    const stats = $("checkin-stats");
+    if (!card || !list || !stats) return;
+    const recent = state.checkIns.slice(-4).reverse();
+    if (!recent.length) {
+      card.classList.add("hidden");
+      list.replaceChildren();
+      return;
+    }
+    const today = todayKey();
+    const todayItems = state.checkIns.filter((item) => dateKey(new Date(item.createdAt)) === today);
+    const lowEnergy = todayItems.filter((item) => item.energy === "basse").length;
+    stats.textContent = lowEnergy
+      ? `${todayItems.length} aujourd'hui · énergie basse ${lowEnergy} fois`
+      : `${todayItems.length} aujourd'hui`;
+    list.replaceChildren(...recent.map((item) => {
+      const row = document.createElement("p");
+      row.className = "checkin-item";
+      const time = new Date(item.createdAt).toLocaleTimeString("fr-CA", { hour: "2-digit", minute: "2-digit" });
+      row.textContent = `${time} · ${item.status} · énergie ${item.energy}${item.note ? ` · ${item.note}` : ""}`;
+      return row;
+    }));
+    card.classList.remove("hidden");
   }
 
   function selectQuickType(type) {
@@ -523,9 +1104,12 @@
     if (!list) return;
     const selectedDate = selectedAgendaDate();
     state.agendaDate = selectedDate;
-    $("agenda-date").value = selectedDate;
-    $("agenda-day-label").textContent = agendaDateLabel(selectedDate);
-    $("agenda-month-label").textContent = agendaMonthLabel(selectedDate);
+    const agendaDateInput = $("agenda-date");
+    const dayLabel = $("agenda-day-label");
+    const monthLabel = $("agenda-month-label");
+    if (agendaDateInput) agendaDateInput.value = selectedDate;
+    if (dayLabel) dayLabel.textContent = agendaDateLabel(selectedDate);
+    if (monthLabel) monthLabel.textContent = agendaMonthLabel(selectedDate);
     renderAgendaCalendar(selectedDate);
     const items = agendaItemsForSelectedDate();
     const count = $("agenda-count");
@@ -626,9 +1210,17 @@
     if (!item) return;
     const nextText = window.prompt("Modifier", item.text)?.trim();
     if (!nextText) return;
-    const nextDate = window.prompt("Date", item.date)?.trim();
+    const nextDate = window.prompt("Date (AAAA-MM-JJ)", item.date)?.trim();
     if (!nextDate) return;
     const nextTime = window.prompt("Heure", item.time || "")?.trim() || "";
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(nextDate)) {
+      showToast("Date invalide. Format attendu : AAAA-MM-JJ.");
+      return;
+    }
+    if (nextTime && !/^\d{2}:\d{2}$/.test(nextTime)) {
+      showToast("Heure invalide. Format attendu : HH:MM.");
+      return;
+    }
     const nextReminder = window.prompt("Rappel : none, 0, 5, 15, 30 ou 60", item.reminder || "none")?.trim() || "none";
     item.text = nextText;
     item.date = nextDate;
@@ -805,9 +1397,12 @@
   }
 
   function renderSettings() {
-    $("notify-important").checked = state.notifications.important;
-    $("notify-summary").checked = state.notifications.summary;
-    $("notification-status").textContent = notificationPermissionText();
+    const notifyImportant = $("notify-important");
+    const notifySummary = $("notify-summary");
+    const notificationStatus = $("notification-status");
+    if (notifyImportant) notifyImportant.checked = state.notifications.important;
+    if (notifySummary) notifySummary.checked = state.notifications.summary;
+    if (notificationStatus) notificationStatus.textContent = notificationPermissionText();
     renderInstallState();
   }
 
@@ -995,6 +1590,12 @@
   }
 
   function bindEvents() {
+    const bindById = (id, eventName, handler) => {
+      const element = $(id);
+      if (!element) return;
+      element.addEventListener(eventName, handler);
+    };
+
     document.querySelectorAll("[data-view-button]").forEach((button) => {
       button.addEventListener("click", () => showView(button.dataset.viewButton));
     });
@@ -1009,8 +1610,8 @@
     document.querySelectorAll("[data-select-domain]").forEach((button) => {
       button.addEventListener("click", () => selectHomeDomain(button.dataset.selectDomain));
     });
-    $("close-selected-domain").addEventListener("click", closeSelectedDomain);
-    $("add-selected-goal").addEventListener("click", () => addCustomGoal($("add-selected-goal").dataset.addGoal));
+    bindById("close-selected-domain", "click", closeSelectedDomain);
+    bindById("add-selected-goal", "click", () => addCustomGoal($("add-selected-goal").dataset.addGoal));
     document.querySelectorAll("[data-toggle-missions]").forEach((button) => {
       button.addEventListener("click", () => {
         const card = button.closest(".home-domain-card");
@@ -1026,21 +1627,40 @@
     });
     document.querySelectorAll("[data-complete]").forEach((button) => {
       button.addEventListener("click", () => {
+        const domainPanel = button.closest(".domain-panel");
+        const panelDomain = domainPanel?.id?.replace("domain-", "") || "";
         if (button.dataset.homeTask) {
           state.selectedDomain = button.dataset.homeTask;
           saveState();
           renderHomeSuggestion();
+        } else if (panelDomain) {
+          state.selectedDomain = panelDomain;
+          saveState();
         }
-        completeTask(button.dataset.complete);
+        button.dataset.goalDomain = state.selectedDomain;
+        toggleGoalSelection(button.dataset.complete, state.selectedDomain);
       });
     });
 
-    $("next-action").addEventListener("click", () => showEmergencyAction(false));
-    $("emergency-done").addEventListener("click", completeEmergencyAction);
-    $("emergency-other").addEventListener("click", () => showEmergencyAction(true));
-    $("choose-domain-button").addEventListener("click", () => showView("domains"));
+    bindById("next-action", "click", () => showEmergencyAction(false));
+    bindById("emergency-done", "click", completeEmergencyAction);
+    bindById("emergency-other", "click", () => showEmergencyAction(true));
+    bindById("start-challenge", "click", startChallenge);
+    bindById("cancel-challenge", "click", cancelChallenge);
+    bindById("finish-challenge", "click", completeActiveChallenge);
+    bindById("start-goal-queue", "click", startGoalQueue);
+    bindById("start-goal-queue-inline", "click", startGoalQueue);
+    bindById("skip-goal", "click", skipQueueGoal);
+    bindById("stop-goal-queue", "click", () => stopGoalQueue());
+    bindById("choose-domain-button", "click", () => showView("domains"));
     $("quick-add-button")?.addEventListener("click", openQuickAdd);
     $("close-quick-add")?.addEventListener("click", closeQuickAdd);
+    $("checkin-button")?.addEventListener("click", openCheckIn);
+    $("close-checkin")?.addEventListener("click", closeCheckIn);
+    $("save-checkin")?.addEventListener("click", saveCheckIn);
+    $("checkin-note")?.addEventListener("keydown", (event) => {
+      if (event.key === "Enter") saveCheckIn();
+    });
     document.querySelectorAll("[data-quick-type]").forEach((button) => {
       button.addEventListener("click", () => selectQuickType(button.dataset.quickType));
     });
@@ -1063,24 +1683,24 @@
       if (event.key === "Enter") saveShopReward();
     });
 
-    $("notify-important").addEventListener("change", (event) => {
+    bindById("notify-important", "change", (event) => {
       state.notifications.important = event.target.checked;
       saveState();
       showToast("Réglage enregistré.");
     });
-    $("notify-summary").addEventListener("change", (event) => {
+    bindById("notify-summary", "change", (event) => {
       state.notifications.summary = event.target.checked;
       saveState();
       showToast("Réglage enregistré.");
     });
-    $("enable-notifications").addEventListener("click", requestNotifications);
-    $("test-notification").addEventListener("click", testNotification);
-    $("settings-install-button").addEventListener("click", startInstall);
-    $("install-yes").addEventListener("click", startInstall);
-    $("install-later").addEventListener("click", dismissInstallInvite);
-    $("save-idea").addEventListener("click", saveIdea);
-    $("save-reward").addEventListener("click", saveReward);
-    $("reward-input").addEventListener("keydown", (event) => {
+    bindById("enable-notifications", "click", requestNotifications);
+    bindById("test-notification", "click", testNotification);
+    bindById("settings-install-button", "click", startInstall);
+    bindById("install-yes", "click", startInstall);
+    bindById("install-later", "click", dismissInstallInvite);
+    bindById("save-idea", "click", saveIdea);
+    bindById("save-reward", "click", saveReward);
+    bindById("reward-input", "keydown", (event) => {
       if (event.key === "Enter") saveReward();
     });
     document.querySelectorAll("[data-motivation]").forEach((button) => {
@@ -1089,13 +1709,14 @@
     document.querySelectorAll("[data-reward]").forEach((button) => {
       button.addEventListener("click", () => toggleSelection(button, "rewards", button.dataset.reward));
     });
-    $("finish-onboarding").addEventListener("click", finishOnboarding);
+    bindById("finish-onboarding", "click", finishOnboarding);
 
-    $("reset-data").addEventListener("click", () => {
+    bindById("reset-data", "click", () => {
       localStorage.removeItem(STORAGE_KEY);
-      state = structuredClone(defaultState);
+      state = cloneState(defaultState);
       render();
       closeDomain();
+      closeCheckIn();
       showView("home");
       showToast("Données effacées.");
     });
@@ -1103,6 +1724,8 @@
 
   function render() {
     renderHomeSuggestion();
+    renderCheckInChoices();
+    renderCheckInHistory();
     renderQuickItems();
     renderAgenda();
     renderIdeas();
@@ -1114,6 +1737,9 @@
     renderOnboarding();
     renderInstallInvite();
     renderVersionInfo();
+    renderGoalQueue();
+    renderChallengeTimer();
+    resumeChallengeTimer();
     scheduleAgendaReminders();
   }
 

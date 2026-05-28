@@ -1,38 +1,10 @@
 {
-  "version": "v0.12.1",
+  "version": "v0.11.1",
   "updated": "2026-05-27",
   "changes": [
-    "Domaine Travail retire"
+    "Libelle Parametres clarifie"
   ],
   "history": [
-    {
-      "version": "v0.12.1",
-      "date": "2026-05-27",
-      "changes": [
-        "Domaine Travail retire"
-      ]
-    },
-    {
-      "version": "v0.12.0",
-      "date": "2026-05-27",
-      "changes": [
-        "Agenda mensuel style ELAN"
-      ]
-    },
-    {
-      "version": "v0.11.3",
-      "date": "2026-05-27",
-      "changes": [
-        "Domaine Repos retire"
-      ]
-    },
-    {
-      "version": "v0.11.2",
-      "date": "2026-05-27",
-      "changes": [
-        "Bouton parametres icone mobile"
-      ]
-    },
     {
       "version": "v0.11.1",
       "date": "2026-05-27",

@@ -1,21 +1,5 @@
 # Historique Élan
 
-## v0.12.1 - 2026-05-27
-
-- Domaine Travail retire
-
-## v0.12.0 - 2026-05-27
-
-- Agenda mensuel style ELAN
-
-## v0.11.3 - 2026-05-27
-
-- Domaine Repos retire
-
-## v0.11.2 - 2026-05-27
-
-- Bouton parametres icone mobile
-
 ## v0.11.1 - 2026-05-27
 
 - Libelle Parametres clarifie
