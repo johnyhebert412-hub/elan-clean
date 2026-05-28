@@ -386,6 +386,7 @@
     const panel = $("goal-queue-panel");
     const list = $("goal-queue-list");
     const count = $("goal-queue-count");
+    const title = $("goal-queue-title");
     const startButton = $("start-goal-queue");
     const skipButton = $("skip-goal");
     const stopButton = $("stop-goal-queue");
@@ -401,8 +402,11 @@
     panel.classList.remove("hidden");
     panel.dataset.status = isActive ? "active" : "setup";
     const currentIndex = state.goalQueue?.currentIndex || 0;
-    if (count) count.textContent = isActive ? `${currentIndex + 1} / ${items.length}` : `${items.length} sélectionné${items.length > 1 ? "s" : ""}`;
-    list.replaceChildren(...items.map((item, index) => {
+    if (title) title.textContent = isActive ? "Série en cours" : `${items.length} objectif${items.length > 1 ? "s" : ""} sélectionné${items.length > 1 ? "s" : ""}`;
+    if (count) count.textContent = isActive ? `${currentIndex + 1} / ${items.length}` : "Touchez à nouveau pour retirer";
+    const visibleItems = isActive ? items : [];
+    list.classList.toggle("hidden", !isActive);
+    list.replaceChildren(...visibleItems.map((item, index) => {
       const row = document.createElement("div");
       row.className = "goal-queue-item";
       row.classList.toggle("current", isActive && index === currentIndex);
@@ -410,13 +414,6 @@
       const label = document.createElement("span");
       label.textContent = item.label;
       row.append(label);
-      if (!isActive) {
-        const remove = document.createElement("button");
-        remove.type = "button";
-        remove.textContent = "Retirer";
-        remove.addEventListener("click", () => removeQueuedGoal(index));
-        row.append(remove);
-      }
       return row;
     }));
     if (startButton) startButton.classList.toggle("hidden", isActive);
