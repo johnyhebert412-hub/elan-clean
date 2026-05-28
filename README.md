@@ -1,4 +1,4 @@
-# Élan v0.12.1 - version propre
+# Élan v0.12.0 - version propre
 
 Application mobile simple en HTML, CSS et JavaScript. Aucun framework et aucun build obligatoire.
 
@@ -30,6 +30,6 @@ La commande `npm run build` valide les scripts avant la publication, sans transf
 
 ## Version
 
-- Version : v0.12.1
+- Version : v0.12.0
 - Date : 2026-05-27
-- Changement : Domaine Travail retire
+- Changement : Agenda mensuel style ELAN
