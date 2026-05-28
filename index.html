@@ -1,392 +1,307 @@
-﻿<!doctype html>
-<html lang="fr-CA">
+<!doctype html>
+<html lang="fr">
   <head>
-    <meta charset="UTF-8">
+    <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-    <meta name="theme-color" content="#165446">
-    <title>Élan - Coach du quotidien</title>
+    <meta name="theme-color" content="#162723">
+    <meta name="description" content="Coach de micro-objectifs pour retrouver un quotidien fonctionnel.">
     <link rel="manifest" href="manifest.webmanifest">
     <link rel="icon" href="icons/icon.svg" type="image/svg+xml">
     <link rel="stylesheet" href="styles.css">
-    <script defer src="app.js"></script>
+    <title>Elan - Petits pas, vraie autonomie</title>
   </head>
   <body>
     <div class="app-shell">
       <header class="topbar">
         <div>
-          <p class="eyebrow">Coach du quotidien</p>
-          <h1>Élan</h1>
+          <p class="eyebrow">Aujourd'hui</p>
+          <h1>Elan</h1>
         </div>
-        <div class="calm-badge" aria-label="Élan accompagne ta journée">
-          <span>une action</span>
-        </div>
+        <button class="wallet-pill" data-action="show-view" data-view="progress" aria-label="Ouvrir la boutique">
+          <strong id="wallet-balance">0</strong>
+          <span>jetons</span>
+        </button>
       </header>
 
       <main>
-        <section id="view-home" class="view active" aria-labelledby="home-title">
-          <article class="hero action-hero">
-            <p class="step">Accès rapide</p>
-            <h2 id="home-title">Urgence mentale</h2>
-            <button id="next-action" class="primary action-button">Urgence mentale</button>
-            <button id="choose-domain-button" class="hero-link">Personnaliser doucement</button>
+        <section id="today" class="view active" aria-label="Aujourd'hui">
+          <button id="simple-mode-entry" class="simple-mode-entry" data-action="open-simple-mode">
+            Urgence mentale
+          </button>
+
+          <article id="simple-mode-card" class="card simple-mode-card hidden" aria-live="polite">
+            <p class="step-label">Urgence mentale</p>
+            <h2>Fais une chose.</h2>
+            <p id="simple-action-text" class="simple-action"></p>
+            <p id="simple-time" class="simple-time">1 minute</p>
+            <button class="primary full simple-start" data-action="start-simple-timer">Démarrer</button>
+            <button class="secondary full" data-action="another-simple-suggestion">Autre suggestion</button>
+            <button class="text-link simple-exit" data-action="exit-simple-mode">Retour</button>
           </article>
 
-          <article id="emergency-card" class="emergency-card hidden" aria-live="polite">
-            <p class="step">Mode secours</p>
-            <h2 id="emergency-action">Prends 3 grandes respirations</h2>
-            <button id="emergency-done" class="primary action-button">C'est fait</button>
-            <button id="emergency-other" class="text-button">Autre action</button>
+          <article id="reward-setup-card" class="card hidden">
+            <p class="step-label">Une fois</p>
+            <h2>Choisis tes récompenses</h2>
+            <div id="reward-choice-list" class="reward-choice-list">
+              <button data-reward-choice="Gaming">Gaming</button>
+              <button data-reward-choice="Série ou vidéo">Série ou vidéo</button>
+              <button data-reward-choice="Boisson ou collation">Boisson ou collation</button>
+              <button data-reward-choice="Temps tranquille">Temps tranquille</button>
+              <button data-reward-choice="Sortie ou activité">Sortie ou activité</button>
+              <button data-reward-choice="Petit achat plaisir">Petit achat plaisir</button>
+            </div>
+            <label class="custom-reward">
+              <span>Autre récompense</span>
+              <input id="custom-reward" type="text" placeholder="Ex.: mon repas préféré" maxlength="70">
+            </label>
+            <p id="reward-setup-error" class="fine-print hidden">Choisis au moins une récompense.</p>
+            <button class="primary full" data-action="save-rewards">Continuer</button>
           </article>
 
-          <article class="domain-choice-card" aria-labelledby="domain-choice-title">
-            <p class="step">Choix simple</p>
-            <h2 id="domain-choice-title">Que veux-tu faire ?</h2>
-            <p class="muted">Choisis un domaine</p>
-            <div class="domain-choice-grid">
-              <button data-select-domain="house">🧹 Maison</button>
-              <button data-select-domain="finance">💰 Finances</button>
-              <button data-select-domain="health">💧 Santé</button>
-              <button data-select-domain="productivity">🎯 Productivité</button>
-              <button data-select-domain="outside">🌲 Activité / extérieur</button>
+          <article id="day-type-card" class="card action-card">
+            <p id="greeting" class="step-label">Aujourd'hui</p>
+            <h2>Que veux-tu faire?</h2>
+            <button id="start-day-button" class="main-action-button" data-action="reveal-day-types">
+              <span class="main-action-caption">Commence ici</span>
+              <strong>Choisir mon objectif</strong>
+            </button>
+            <div id="day-type-options" class="day-type-options hidden">
+              <p class="option-hint">Choisis un domaine</p>
+              <div id="day-type-list" class="day-type-list"></div>
             </div>
           </article>
 
-          <article id="selected-domain-card" class="selected-domain-card hidden" aria-live="polite">
-            <div class="card-header">
+          <article id="focus-card" class="card hidden">
+            <div class="section-title">
               <div>
-                <p class="step">Missions</p>
-                <h2 id="selected-domain-title">Domaine</h2>
+                <p class="step-label">Objectif</p>
+                <h2 id="selected-day-type"></h2>
               </div>
-              <button id="close-selected-domain" class="text-button">Changer</button>
+              <button class="text-link" data-action="change-day-type">Changer</button>
             </div>
-            <p id="selected-domain-subtitle" class="muted">Choisis une action.</p>
-            <div id="selected-domain-missions" class="task-list"></div>
-            <button id="add-selected-goal" class="add-small" type="button">Ajouter un objectif</button>
-          </article>
-        </section>
-
-        <section id="view-domains" class="view" aria-labelledby="domains-title">
-          <div class="section-heading">
-            <p class="step">Domaines</p>
-            <h2 id="domains-title">Choisis ton besoin</h2>
-          </div>
-          <div class="domain-grid">
-            <button type="button" class="domain-tile domain-house" data-open-domain="house" aria-controls="domain-house"><strong>Maison</strong><span>Soulagement</span><em id="count-house">À commencer</em><span class="domain-meter"><i id="progress-house"></i></span></button>
-            <button type="button" class="domain-tile domain-finance" data-open-domain="finance" aria-controls="domain-finance"><strong>Finances</strong><span>Clarté</span><em id="count-finance">À commencer</em><span class="domain-meter"><i id="progress-finance"></i></span></button>
-            <button type="button" class="domain-tile domain-health" data-open-domain="health" aria-controls="domain-health"><strong>Santé</strong><span>Énergie</span><em id="count-health">À commencer</em><span class="domain-meter"><i id="progress-health"></i></span></button>
-            <button type="button" class="domain-tile domain-productivity" data-open-domain="productivity" aria-controls="domain-productivity"><strong>Productivité</strong><span>Démarrage</span><em id="count-productivity">À commencer</em><span class="domain-meter"><i id="progress-productivity"></i></span></button>
-            <button type="button" class="domain-tile domain-outside" data-open-domain="outside" aria-controls="domain-outside"><strong>Activité / extérieur</strong><span>Mouvement</span><em id="count-outside">À commencer</em><span class="domain-meter"><i id="progress-outside"></i></span></button>
-          </div>
-
-          <article id="domain-finance" class="card domain-panel hidden">
-            <div class="card-header"><h2>Finance</h2><button class="text-button" data-close-domain>Changer</button></div>
-            <p class="muted">Budget simple. Anti impulsivité. Aucune incitation à dépenser.</p>
-            <div class="task-list">
-              <button data-complete="Vérifier le solde">Vérifier le solde</button>
-              <button data-complete="Attendre avant un achat">Attendre avant un achat</button>
-              <button data-complete="Payer une facture">Payer une facture</button>
-            </div>
+            <p class="muted">Choisis:</p>
+            <p id="objective-status" class="objective-status hidden" aria-live="polite"></p>
+            <div id="focus-list" class="focus-list"></div>
+            <button id="locked-focus-note" class="locked-focus-note hidden" data-action="show-view" data-view="progress"></button>
+            <button class="secondary full" data-action="back-to-day-types">Retour</button>
           </article>
 
-          <article id="domain-house" class="card domain-panel hidden">
-            <div class="card-header"><h2>Maison</h2><button class="text-button" data-close-domain>Changer</button></div>
-            <p class="muted">Petits gestes pour avancer à la maison.</p>
-            <div class="task-list">
-              <button data-complete="Faire la vaisselle">Faire la vaisselle</button>
-              <button data-complete="Ranger une surface">Ranger une surface</button>
-              <button data-complete="Lancer une brassée">Lancer une brassée</button>
+          <article id="effort-card" class="card hidden">
+            <p class="step-label">Durée</p>
+            <h2 id="selected-focus"></h2>
+            <div class="effort-list">
+              <button data-effort="light"><strong>Léger</strong><span>2 à 3 min</span></button>
+              <button data-effort="normal" class="recommended"><strong>Normal</strong><span>8 à 10 min</span></button>
+              <button data-effort="momentum"><strong>Gros élan</strong><span>15 à 20 min</span></button>
             </div>
+            <button class="secondary full" data-action="back-to-focus">Retour</button>
           </article>
 
-          <article id="domain-health" class="card domain-panel hidden">
-            <div class="card-header"><h2>Santé</h2><button class="text-button" data-close-domain>Changer</button></div>
-            <p class="muted">Énergie réelle : eau, sommeil, médication, mouvement léger.</p>
-            <div class="task-list">
-              <button data-complete="Boire de l'eau">Boire de l'eau</button>
-              <button data-complete="Préparer mon sommeil">Préparer mon sommeil</button>
-              <button data-complete="Vérifier ma médication">Vérifier ma médication</button>
-              <button data-complete="Bouger 2 minutes">Bouger 2 minutes</button>
-            </div>
-          </article>
-
-          <article id="domain-mental" class="card domain-panel hidden mental-emergency">
-            <div class="card-header"><h2>Urgence mentale</h2><button class="text-button" data-close-domain>Changer</button></div>
-            <p class="muted">OK. Tu reprends le contrôle. Une action physique, maintenant.</p>
-            <div class="task-list">
-              <button data-complete="Toucher 3 objets différents">Touche 3 objets différents</button>
-              <button data-complete="Prendre 3 grandes respirations">Prends 3 grandes respirations</button>
-              <button data-complete="Boire un verre d'eau">Bois un verre d'eau</button>
-              <button data-complete="Nommer 3 choses autour">Regarde autour et nomme 3 choses</button>
-              <button data-complete="Relâcher les épaules">Relâche tes épaules</button>
-              <button data-complete="Mettre les deux pieds au sol">Mets les deux pieds au sol</button>
-              <button data-complete="Fermer les yeux 10 secondes">Ferme les yeux 10 secondes</button>
-              <button data-complete="Marcher 30 secondes">Marche 30 secondes</button>
-              <button data-complete="Écouter un son autour">Écoute un son autour de toi</button>
-              <button data-complete="Pause écran 1 minute">Prends une pause écran 1 minute</button>
-            </div>
-          </article>
-
-          <article id="domain-productivity" class="card domain-panel hidden">
-            <div class="card-header"><h2>Productivité</h2><button class="text-button" data-close-domain>Changer</button></div>
-            <p class="muted">Démarrer petit, sans te noyer.</p>
-            <div class="task-list">
-              <button data-complete="Ouvrir la tâche">Ouvrir la tâche</button>
-              <button data-complete="Écrire une phrase">Écrire une phrase</button>
-              <button data-complete="Timer 2 minutes">Timer 2 minutes</button>
-            </div>
-          </article>
-
-          <article id="domain-outside" class="card domain-panel hidden">
-            <div class="card-header"><h2>Activité / extérieur</h2><button class="text-button" data-close-domain>Changer</button></div>
-            <p class="muted">Bouger doucement, sans pression.</p>
-            <div class="task-list">
-              <button data-complete="Mettre tes souliers">Mettre tes souliers</button>
-              <button data-complete="Sortir 2 minutes">Sortir 2 minutes</button>
-              <button data-complete="Prendre l'air dehors">Prendre l'air dehors</button>
-            </div>
-          </article>
-
-          <article id="domain-couple" class="card domain-panel hidden">
-            <div class="card-header"><h2>Couple</h2><button class="text-button" data-close-domain>Changer</button></div>
-            <p class="muted">Connexion simple. Petites attentions.</p>
-            <div class="task-list">
-              <button data-complete="Envoyer un message gentil">Envoyer un message gentil</button>
-              <button data-complete="Offrir une attention">Offrir une attention</button>
-              <button data-complete="Demander comment ça va">Demander comment ça va</button>
-            </div>
-          </article>
-
-        </section>
-
-        <section id="view-agenda" class="view" aria-labelledby="agenda-title">
-          <div class="section-heading">
-            <p class="step">Calendrier doux</p>
-            <h2 id="agenda-title">Agenda</h2>
-          </div>
-
-          <article class="card agenda-month-card">
-            <div class="card-header">
+          <article id="mission-card" class="card mission hidden" aria-live="polite">
+            <div class="mission-header">
               <div>
-                <p class="step">Mois</p>
-                <h2 id="agenda-month-label">Ce mois-ci</h2>
+                <p class="step-label">Action</p>
+                <span id="mission-domain" class="domain-chip"></span>
               </div>
-              <button id="agenda-today" class="secondary" type="button">Aujourd'hui</button>
+              <span id="mission-time" class="time-chip"></span>
             </div>
-            <div class="agenda-month-controls">
-              <button id="agenda-prev-month" class="text-button" type="button">Mois avant</button>
-              <input id="agenda-date" type="date">
-              <button id="agenda-next-month" class="text-button" type="button">Mois après</button>
+            <p id="mission-goal" class="goal-reference"></p>
+            <h2 id="mission-title"></h2>
+            <p id="mission-detail" class="mission-detail"></p>
+            <p id="mission-points" class="points-copy"></p>
+            <div id="before-start-actions" class="mission-actions">
+              <button class="primary" data-action="start-timer">Démarrer</button>
+              <button data-action="easier-mission">Plus court</button>
+              <button data-action="swap-mission">Changer</button>
             </div>
-            <div class="agenda-weekdays" aria-hidden="true">
-              <span>L</span><span>M</span><span>M</span><span>J</span><span>V</span><span>S</span><span>D</span>
+            <div id="timer-panel" class="timer-panel hidden">
+              <p id="timer-step-label" class="step-label">En cours</p>
+              <p class="live-status"><span aria-hidden="true">✓</span> Timer lancé</p>
+              <strong id="timer-display">08:00</strong>
+              <p id="timer-help" class="muted">Continue jusqu'à la sonnerie.</p>
+              <div class="timer-actions">
+                <button class="primary" data-action="finish-early">Terminé</button>
+                <button id="stop-timer-label" data-action="stop-timer">Arrêter</button>
+              </div>
             </div>
-            <div id="agenda-calendar" class="agenda-calendar" aria-label="Calendrier du mois"></div>
           </article>
 
+          <article id="timer-done-card" class="card reward hidden" aria-live="polite">
+            <div class="success-mark" aria-hidden="true">✓</div>
+            <p id="timer-done-label" class="step-label">Temps écoulé</p>
+            <h2 id="timer-done-title">Action faite?</h2>
+            <div class="completion-actions">
+              <button class="primary" data-action="confirm-complete">Oui, fait</button>
+              <button data-action="not-completed">Non</button>
+            </div>
+          </article>
+
+          <article id="simple-done-card" class="card simple-done-card hidden" aria-live="polite">
+            <div class="success-mark" aria-hidden="true">✓</div>
+            <h2>C'est fait.</h2>
+            <p class="muted">Ça suffit pour maintenant.</p>
+            <button class="primary full" data-action="another-simple-suggestion">Autre action</button>
+            <button class="text-link simple-exit" data-action="exit-simple-mode">Retour</button>
+          </article>
+
+          <article id="reward-card" class="card reward hidden" aria-live="polite">
+            <div id="reward-check" class="success-mark hidden" aria-hidden="true">✓</div>
+            <p class="step-label">Réussi</p>
+            <h2 id="reward-title">Bien joué.</h2>
+            <p id="reward-message"></p>
+            <div id="win-summary" class="win-summary hidden">
+              <div class="win-gain">
+                <strong id="win-points">+0</strong>
+                <span>jetons</span>
+              </div>
+              <div class="win-progress">
+                <p id="win-progress-label"></p>
+                <div class="win-meter" aria-hidden="true">
+                  <div id="win-meter-fill"></div>
+                </div>
+              </div>
+            </div>
+            <div id="next-step-panel" class="hidden">
+              <button id="shop-button" class="reward-button" data-action="show-view" data-view="progress">Ouvrir la boutique</button>
+              <h3>Suite?</h3>
+              <button id="continue-button" class="primary full" data-action="continue-objective">Continuer</button>
+              <div id="suggestion-list" class="suggestion-list"></div>
+              <button id="change-day-type-button" class="secondary full" data-action="change-day-type">Changer de domaine</button>
+              <button id="exit-simple-button" class="secondary full hidden" data-action="exit-simple-mode">Mode complet</button>
+            </div>
+            <button id="return-button" class="primary hidden" data-action="return-to-objectives">Autre objectif</button>
+          </article>
+
+          <article id="reward-timer-card" class="card reward hidden" aria-live="polite">
+            <p class="step-label">Pause</p>
+            <p class="live-status reward-status"><span aria-hidden="true">✓</span> Pause lancée</p>
+            <h2 id="active-reward-title"></h2>
+            <strong id="reward-timer-display" class="reward-clock">15:00</strong>
+            <p class="muted">Profite de ta pause.</p>
+            <button class="primary full" data-action="finish-reward">Pause terminée</button>
+          </article>
+
+          <button id="daily-review-toggle" class="daily-review-toggle hidden" data-action="toggle-daily-review" aria-expanded="false">
+            <span id="daily-review-label">Suivi du jour</span>
+            <span class="tracking-score"><strong id="today-score">0</strong> gagnés</span>
+          </button>
+          <div id="daily-review-panel" class="daily-review-panel hidden">
+            <article class="card compact">
+              <div class="section-title">
+                <h2>Jetons gagnés</h2>
+                <button class="text-link" data-action="show-view" data-view="progress">Boutique</button>
+              </div>
+              <div class="daily-meter" aria-label="Jetons gagnés aujourd'hui">
+                <div id="meter-fill" class="meter-fill"></div>
+              </div>
+              <p id="daily-status" class="muted status-copy"></p>
+            </article>
+
+            <article class="card">
+              <div class="section-title">
+                <h2>Actions du jour</h2>
+                <span id="checkin-count" class="domain-chip">0 action</span>
+              </div>
+              <p id="checkin-summary" class="muted">Rien encore.</p>
+              <div id="checkin-list" class="checkin-list"></div>
+            </article>
+          </div>
+        </section>
+
+        <section id="missions" class="view" aria-label="Objectifs">
+          <div class="section-heading">
+            <p class="eyebrow">Choix</p>
+            <h2>Domaines</h2>
+          </div>
+          <div id="domain-list" class="domain-list"></div>
+        </section>
+
+        <section id="progress" class="view" aria-label="Boutique">
+          <div class="section-heading">
+            <p class="eyebrow">Boutique</p>
+            <h2><span id="shop-balance">0</span> jetons</h2>
+            <p class="muted">Gagne. Dépense. Profite.</p>
+          </div>
+          <article class="summary-grid">
+            <div class="stat-card"><strong id="stat-today">0</strong><span>Gagnés aujourd'hui</span></div>
+            <div class="stat-card"><strong id="stat-week">0</strong><span>Gagnés en 7 jours</span></div>
+            <div class="stat-card"><strong id="stat-actions">0</strong><span>Actions faites</span></div>
+          </article>
           <article class="card">
-            <div class="card-header">
+            <h2>Mes récompenses</h2>
+            <div id="reward-list" class="reward-list"></div>
+          </article>
+          <article class="card">
+            <h2>Objectifs</h2>
+            <p id="slot-status" class="muted"></p>
+            <button id="buy-slot-button" class="secondary full" data-action="buy-objective-slot">+1 objectif · 10 jetons</button>
+          </article>
+          <article class="card">
+            <h2>Derniers gains</h2>
+            <div id="activity-list" class="activity-list muted">Aucune encore. Le premier pas comptera.</div>
+          </article>
+        </section>
+
+        <section id="settings" class="view" aria-label="Reglages">
+          <div class="section-heading">
+            <p class="eyebrow">Réglages</p>
+            <h2>Rappels</h2>
+            <p class="muted">Choisis tes rappels.</p>
+          </div>
+          <article class="card">
+            <div class="notification-line">
               <div>
-                <p class="step">Jour choisi</p>
-                <h2 id="agenda-day-label">Aujourd'hui</h2>
+                <h3>Notifications Android</h3>
+                <p id="notification-status" class="muted">Pas encore activées.</p>
               </div>
-              <span id="agenda-count" class="small-muted">0 item</span>
+              <button id="notification-button" class="primary" data-action="enable-notifications">Activer</button>
             </div>
-            <div id="agenda-list" class="agenda-list"></div>
+            <button class="secondary full" data-action="test-notification">Tester</button>
+            <p id="notification-result" class="notification-result hidden" aria-live="polite"></p>
           </article>
-
-          <article id="agenda-form-card" class="card agenda-card hidden">
-            <div class="card-header">
-              <h2>Ajouter</h2>
-              <button id="close-agenda-form" class="text-button" type="button">Fermer</button>
-            </div>
-            <p class="small-muted">Une chose claire suffit.</p>
-            <div class="agenda-form">
-              <label>
-                Type
-                <select id="agenda-type">
-                  <option value="Tâche">Tâche</option>
-                  <option value="Travail">Travail</option>
-                  <option value="Pause">Pause</option>
-                  <option value="Rendez-vous">Rendez-vous</option>
-                  <option value="Habitude">Habitude</option>
-                  <option value="Bloc de temps">Bloc de temps</option>
-                </select>
-              </label>
-              <label>
-                Titre
-                <input id="agenda-text" type="text" maxlength="90" placeholder="Ex.: vaisselle, appel, pause 10 min">
-              </label>
-              <label>
-                Heure optionnelle
-                <input id="agenda-time" type="time">
-              </label>
-              <label>
-                Rappel
-                <select id="agenda-reminder">
-                  <option value="none">Aucun rappel</option>
-                  <option value="0">À l'heure exacte</option>
-                  <option value="5">5 minutes avant</option>
-                  <option value="15">15 minutes avant</option>
-                  <option value="30">30 minutes avant</option>
-                  <option value="60">1 heure avant</option>
-                </select>
-              </label>
-              <button id="save-agenda-item" class="primary wide" type="button">Ajouter à l'agenda</button>
-            </div>
-            <p class="small-muted">Les rappels fonctionnent quand ÉLAN reste ouvert.</p>
-          </article>
-
-          <button id="open-agenda-form" class="agenda-fab" type="button" aria-label="Ajouter un événement">+</button>
-        </section>
-
-        <section id="view-shop" class="view" aria-labelledby="shop-title">
-          <div class="section-heading">
-            <p class="step">Récompenses</p>
-            <h2 id="shop-title">Boutique</h2>
-          </div>
-          <article class="card shop-balance-card">
-            <p class="step">Monnaie virtuelle</p>
-            <h2 id="coin-balance">0 pièces</h2>
-            <p class="small-muted">Aucune dépense réelle. Tes pièces servent seulement à débloquer des pauses.</p>
-          </article>
-
           <article class="card">
-            <h2>Récompenses</h2>
-            <p class="small-muted">Choisis une récompense saine quand tu as avancé.</p>
-            <div id="shop-rewards" class="shop-list"></div>
+            <h2>Installer Elan</h2>
+            <p id="install-status" class="muted">Vérification...</p>
+            <button id="install-button" class="primary full hidden" data-action="install-app">Installer Elan</button>
+            <button class="secondary full" data-action="check-installation">Vérifier</button>
+            <p id="developer-details" class="fine-print hidden"></p>
           </article>
-
           <article class="card">
-            <h2>Ajouter une récompense</h2>
-            <p class="small-muted">Ex.: musique, pause relax, série, temps calme.</p>
-            <label class="idea-label">
-              <span>Récompense personnelle</span>
-              <input id="shop-reward-input" type="text" maxlength="80" placeholder="Ex.: podcast 15 min">
+            <h2>Horaires</h2>
+            <label class="toggle-line">
+              <input type="checkbox" data-reminder-toggle="arrival">
+              <span>Retour à la maison</span>
+              <input type="time" value="18:00" data-reminder-time="arrival">
             </label>
-            <button id="save-shop-reward" class="secondary wide" type="button">Ajouter à la boutique</button>
-          </article>
-        </section>
-
-        <section id="view-settings" class="view" aria-labelledby="settings-title">
-          <div class="section-heading">
-            <p class="step">Paramètres</p>
-            <h2 id="settings-title">Réglages simples</h2>
-          </div>
-          <article class="card">
-            <h2>Notifications</h2>
-            <p id="notification-status" class="status-box">Notifications non vérifiées.</p>
-            <label class="switch-line">
-              <input id="notify-important" type="checkbox">
-              <span>Rappels importants</span>
+            <label class="toggle-line">
+              <input type="checkbox" data-reminder-toggle="evening">
+              <span>Bilan doux du soir</span>
+              <input type="time" value="21:00" data-reminder-time="evening">
             </label>
-            <label class="switch-line">
-              <input id="notify-summary" type="checkbox">
-              <span>Résumé quotidien</span>
-            </label>
-            <div class="button-row">
-              <button id="enable-notifications" class="primary">Autoriser</button>
-              <button id="test-notification" class="secondary">Tester</button>
-            </div>
-            <p class="small-muted">Les rappels fonctionnent quand ÉLAN reste ouvert.</p>
+            <p class="fine-print">Rappels actifs si Elan reste ouvert.</p>
           </article>
-
           <article class="card">
-            <h2>Installation</h2>
-            <p id="install-status" class="status-box">Vérification de l'installation.</p>
-            <button id="settings-install-button" class="secondary wide">Ajouter ÉLAN à l'écran d'accueil</button>
-            <p id="install-help" class="small-muted">Si le bouton ne fonctionne pas, ouvre le menu Chrome ⋮ puis choisis “Ajouter à l'écran d'accueil”.</p>
+            <h2>Mes récompenses</h2>
+            <p id="settings-rewards" class="muted"></p>
+            <button class="secondary full" data-action="edit-rewards">Modifier mes récompenses</button>
           </article>
-
           <article class="card">
-            <h2>Suggestions & idées</h2>
-            <p class="small-muted">Idées, commentaires, bugs ou suggestions. Aucun point ici.</p>
-            <label class="idea-label">
-              <span>Écrire une note</span>
-              <textarea id="ideas-input" rows="4" maxlength="500" placeholder="Ex.: ce qui bloque, ce qui aide, une idée à tester"></textarea>
-            </label>
-            <button id="save-idea" class="secondary wide">Garder cette idée</button>
-            <div id="ideas-list" class="idea-list hidden"></div>
-          </article>
-
-          <article class="card">
-            <h2>Recompenses</h2>
-            <p class="small-muted">Ajoute ce qui te fait du bien. Pas d'achat, pas de pression.</p>
-            <label class="idea-label">
-              <span>Nouvelle recompense</span>
-              <input id="reward-input" type="text" maxlength="80" placeholder="Ex.: musique, pause relax, serie">
-            </label>
-            <button id="save-reward" class="secondary wide">Ajouter une recompense</button>
-            <div id="rewards-list" class="idea-list hidden"></div>
-          </article>
-
-          <article class="card version-card">
-            <h2>À propos</h2>
-            <p class="version-line">
-              <strong id="app-version">Version : v0.12.1</strong>
-              <span id="app-updated" class="muted">Dernière mise à jour : 2026-05-27</span>
-            </p>
-            <p class="small-muted version-heading">Nouveautés</p>
-            <ul id="app-changes" class="version-changes">
-              <li>Domaine Travail retire</li>
-            </ul>
-          </article>
-
-          <article class="card">
-            <button id="reset-data" class="danger-button">Effacer mes données locales</button>
+            <h2>Confidentialité</h2>
+            <p class="muted">Données sur cet appareil seulement.</p>
+            <button class="danger-link" data-action="reset-data">Effacer mes données</button>
           </article>
         </section>
       </main>
 
+      <div id="feedback-toast" class="feedback-toast" role="status" aria-live="polite"></div>
+
       <nav class="bottom-nav" aria-label="Navigation principale">
-        <button class="active" data-view-button="home">Accueil</button>
-        <button data-view-button="domains">Domaines</button>
-        <button data-view-button="agenda">Agenda</button>
-        <button data-view-button="shop">Boutique</button>
-        <button class="settings-nav-button" data-view-button="settings" aria-label="Paramètres">⚙️</button>
+        <button class="active" data-action="show-view" data-view="today"><span>Accueil</span></button>
+        <button data-action="show-view" data-view="missions"><span>Domaines</span></button>
+        <button data-action="show-view" data-view="progress"><span>Boutique</span></button>
+        <button data-action="show-view" data-view="settings"><span>Rappels</span></button>
       </nav>
     </div>
-    <section id="install-invite" class="install-invite hidden" aria-live="polite">
-      <article class="install-card">
-        <div>
-          <p class="step">Installation</p>
-          <h2>Veux-tu ajouter ÉLAN à ton écran d'accueil ?</h2>
-          <p class="small-muted">Plus facile à ouvrir quand tu veux démarrer vite.</p>
-        </div>
-        <div class="button-row">
-          <button id="install-yes" class="primary">Oui, ajouter</button>
-          <button id="install-later" class="secondary">Pas maintenant</button>
-        </div>
-      </article>
-    </section>
-    <section id="onboarding" class="onboarding hidden" aria-labelledby="onboarding-title" role="dialog" aria-modal="true">
-      <article class="onboarding-card">
-        <p class="step">Première ouverture</p>
-        <h2 id="onboarding-title">Qu'est-ce qui te motive le plus ?</h2>
-        <div class="choice-grid" role="group" aria-label="Motivation principale">
-          <button data-motivation="Gaming">🎮 Gaming</button>
-          <button data-motivation="Films / séries">🎬 Films / séries</button>
-          <button data-motivation="Temps relax">😌 Temps relax</button>
-          <button data-motivation="Temps couple">❤️ Temps couple</button>
-          <button data-motivation="Streak">🔥 Streak</button>
-          <button data-motivation="Énergie">⚡ Énergie</button>
-          <button data-motivation="Moins procrastiner">🧠 Moins procrastiner</button>
-        </div>
-
-        <h2 class="onboarding-subtitle">Choisis les récompenses que tu aimes</h2>
-        <div class="reward-grid" role="group" aria-label="Récompenses préférées">
-          <button data-reward="Gaming">Gaming</button>
-          <button data-reward="Films">Films</button>
-          <button data-reward="Séries">Séries</button>
-          <button data-reward="Pause relax">Pause relax</button>
-          <button data-reward="Musique">Musique</button>
-          <button data-reward="Temps calme">Temps calme</button>
-          <button data-reward="Soirée chill">Soirée chill</button>
-          <button data-reward="Temps couple">Temps couple</button>
-        </div>
-        <button id="finish-onboarding" class="primary wide">Commencer ÉLAN</button>
-      </article>
-    </section>
-    <div id="toast" class="toast hidden" role="status" aria-live="polite"></div>
+    <script type="module" src="app.js"></script>
   </body>
 </html>
-
