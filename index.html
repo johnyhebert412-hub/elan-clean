@@ -43,6 +43,7 @@
             <h2 id="domain-choice-title">Que veux-tu faire ?</h2>
             <p class="muted">Choisis un domaine</p>
             <div class="domain-choice-grid">
+              <button data-select-domain="work">🏭 Travail</button>
               <button data-select-domain="house">🧹 Maison</button>
               <button data-select-domain="finance">💰 Finances</button>
               <button data-select-domain="health">💧 Santé</button>
@@ -62,21 +63,6 @@
             <p id="selected-domain-subtitle" class="muted">Choisis une action.</p>
             <div id="selected-domain-missions" class="task-list"></div>
             <button id="add-selected-goal" class="add-small" type="button">Ajouter un objectif</button>
-            <div id="goal-selection-inline" class="goal-selection-inline hidden" aria-live="polite">
-              <p id="goal-selection-inline-summary" class="goal-selection-summary">0 objectif sélectionné</p>
-              <button id="start-goal-queue-inline" class="primary" type="button">Commencer la série</button>
-            </div>
-          </article>
-
-          <article id="checkin-history-card" class="checkin-history-card hidden" aria-live="polite">
-            <div class="card-header">
-              <div>
-                <p class="step">Check-ins</p>
-                <h2>Petit fil de journée</h2>
-              </div>
-              <span id="checkin-stats" class="small-muted">0 aujourd'hui</span>
-            </div>
-            <div id="checkin-history" class="checkin-history"></div>
           </article>
         </section>
 
@@ -86,12 +72,62 @@
             <h2 id="domains-title">Choisis ton besoin</h2>
           </div>
           <div class="domain-grid">
+            <button type="button" class="domain-tile domain-work" data-open-domain="work" aria-controls="domain-work"><strong>Travail</strong><span>Stabilité</span><em id="count-work">À commencer</em><span class="domain-meter"><i id="progress-work"></i></span></button>
             <button type="button" class="domain-tile domain-house" data-open-domain="house" aria-controls="domain-house"><strong>Maison</strong><span>Soulagement</span><em id="count-house">À commencer</em><span class="domain-meter"><i id="progress-house"></i></span></button>
             <button type="button" class="domain-tile domain-finance" data-open-domain="finance" aria-controls="domain-finance"><strong>Finances</strong><span>Clarté</span><em id="count-finance">À commencer</em><span class="domain-meter"><i id="progress-finance"></i></span></button>
             <button type="button" class="domain-tile domain-health" data-open-domain="health" aria-controls="domain-health"><strong>Santé</strong><span>Énergie</span><em id="count-health">À commencer</em><span class="domain-meter"><i id="progress-health"></i></span></button>
             <button type="button" class="domain-tile domain-productivity" data-open-domain="productivity" aria-controls="domain-productivity"><strong>Productivité</strong><span>Démarrage</span><em id="count-productivity">À commencer</em><span class="domain-meter"><i id="progress-productivity"></i></span></button>
             <button type="button" class="domain-tile domain-outside" data-open-domain="outside" aria-controls="domain-outside"><strong>Activité / extérieur</strong><span>Mouvement</span><em id="count-outside">À commencer</em><span class="domain-meter"><i id="progress-outside"></i></span></button>
           </div>
+
+          <article id="domain-work" class="card domain-panel hidden">
+            <div class="card-header">
+              <h2>Travail</h2>
+              <button class="text-button" data-close-domain>Changer</button>
+            </div>
+            <p class="muted">Horaire, pauses, moins de stress. Aucun timer automatique.</p>
+            <form id="work-form" class="form-stack">
+              <label>Début du travail
+                <input id="work-start" type="time" required>
+              </label>
+              <label>Fin du travail
+                <input id="work-end" type="time" required>
+              </label>
+              <label>Pauses prévues
+                <select id="work-breaks">
+                  <option value="none">À déterminer</option>
+                  <option value="one">1 pause</option>
+                  <option value="two">2 pauses</option>
+                  <option value="meal">Pause repas + courte pause</option>
+                </select>
+              </label>
+              <label>Énergie maintenant
+                <select id="work-energy">
+                  <option value="steady">Correcte</option>
+                  <option value="low">Basse</option>
+                  <option value="high">Élevée</option>
+                </select>
+              </label>
+              <label class="switch-line">
+                <input id="work-dnd" type="checkbox">
+                <span>Ne pas déranger pendant le focus</span>
+              </label>
+              <label class="switch-line">
+                <input id="work-soft-reminders" type="checkbox">
+                <span>Mini rappels doux</span>
+              </label>
+              <p class="small-muted">Mode discret : aucun timer ne démarre automatiquement.</p>
+              <button class="primary" type="submit">Enregistrer mon horaire</button>
+            </form>
+            <p id="work-summary" class="status-box hidden"></p>
+            <button id="work-help" class="secondary wide">J'ai besoin d'aide maintenant</button>
+            <div id="work-help-box" class="help-box hidden" aria-live="polite"></div>
+            <div class="task-list work-actions">
+              <button data-complete="Choisir ma priorité">Choisir ma priorité</button>
+              <button data-complete="Prendre une pause prévue">Prendre ma pause prévue</button>
+              <button data-complete="Noter mon énergie au travail">Noter mon énergie</button>
+            </div>
+          </article>
 
           <article id="domain-finance" class="card domain-panel hidden">
             <div class="card-header"><h2>Finance</h2><button class="text-button" data-close-domain>Changer</button></div>
@@ -337,12 +373,12 @@
           <article class="card version-card">
             <h2>À propos</h2>
             <p class="version-line">
-              <strong id="app-version">Version : v0.12.1</strong>
+              <strong id="app-version">Version : v0.12.0</strong>
               <span id="app-updated" class="muted">Dernière mise à jour : 2026-05-27</span>
             </p>
             <p class="small-muted version-heading">Nouveautés</p>
             <ul id="app-changes" class="version-changes">
-              <li>Domaine Travail retire</li>
+              <li>Agenda mensuel style ELAN</li>
             </ul>
           </article>
 
@@ -360,40 +396,6 @@
         <button class="settings-nav-button" data-view-button="settings" aria-label="Paramètres">⚙️</button>
       </nav>
     </div>
-    <button id="checkin-button" class="checkin-button" type="button" aria-controls="checkin-panel" aria-expanded="false">Check-in</button>
-    <section id="checkin-panel" class="checkin-panel hidden" aria-live="polite">
-      <article class="checkin-card">
-        <div class="card-header">
-          <div>
-            <p class="step">Maintenant</p>
-            <h2>Check-in rapide</h2>
-          </div>
-          <button id="close-checkin" class="text-button" type="button">Fermer</button>
-        </div>
-        <div id="checkin-choices" class="checkin-choice-grid" role="group" aria-label="État actuel"></div>
-        <p class="small-muted checkin-label">Énergie</p>
-        <div id="checkin-energy" class="checkin-energy-row" role="group" aria-label="Énergie"></div>
-        <label class="quick-input-label">
-          Note optionnelle
-          <input id="checkin-note" type="text" maxlength="90" placeholder="Ex.: besoin de pause">
-        </label>
-        <button id="save-checkin" class="primary wide" type="button">Valider</button>
-      </article>
-    </section>
-    <section id="goal-selection-dock" class="goal-selection-dock hidden" aria-live="polite">
-      <p id="goal-selection-dock-summary" class="goal-selection-summary">0 objectif sélectionné</p>
-      <button id="start-goal-queue" class="primary" type="button">Commencer la série</button>
-    </section>
-    <section id="goal-queue-active-bar" class="goal-queue-active-bar hidden" aria-live="polite">
-      <div class="goal-queue-active-copy">
-        <p id="goal-queue-active-step" class="goal-queue-active-step">Étape 1 / 1</p>
-        <p id="goal-queue-active-label" class="goal-queue-active-label">Objectif</p>
-      </div>
-      <div class="goal-queue-active-actions">
-        <button id="skip-goal" class="secondary" type="button">Passer</button>
-        <button id="stop-goal-queue" class="secondary" type="button">Arrêter</button>
-      </div>
-    </section>
     <section id="install-invite" class="install-invite hidden" aria-live="polite">
       <article class="install-card">
         <div>
@@ -433,24 +435,6 @@
           <button data-reward="Temps couple">Temps couple</button>
         </div>
         <button id="finish-onboarding" class="primary wide">Commencer ÉLAN</button>
-      </article>
-    </section>
-    <section id="challenge-panel" class="challenge-panel hidden" aria-live="polite">
-      <article class="challenge-card">
-        <div>
-          <p class="step">Défi en cours</p>
-          <h2 id="challenge-title">Défi</h2>
-        </div>
-        <div id="challenge-progress" class="challenge-progress" aria-hidden="true">
-          <strong id="challenge-time">08:00</strong>
-        </div>
-        <p id="challenge-message" class="small-muted">Choisis ta durée, puis démarre doucement.</p>
-        <div id="challenge-durations" class="duration-grid" role="group" aria-label="Durée du défi"></div>
-        <div class="button-row">
-          <button id="start-challenge" class="primary">Je suis prêt</button>
-          <button id="finish-challenge" class="primary hidden">Défi terminé</button>
-          <button id="cancel-challenge" class="secondary">Annuler</button>
-        </div>
       </article>
     </section>
     <div id="toast" class="toast hidden" role="status" aria-live="polite"></div>
