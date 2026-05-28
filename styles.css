@@ -273,7 +273,6 @@ p { line-height: 1.4; }
   font-weight: 650;
 }
 
-.domain-work { --domain: #22705c; --domain-soft: #e3f0ea; }
 .domain-finance { --domain: #99742a; --domain-soft: #f8eed8; }
 .domain-house { --domain: #548069; --domain-soft: #e6f1eb; }
 .domain-health { --domain: #258195; --domain-soft: #e2f2f5; }

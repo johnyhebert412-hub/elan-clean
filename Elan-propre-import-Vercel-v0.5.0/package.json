@@ -1,0 +1,8 @@
+{
+  "name": "elan-propre-mobile",
+  "private": true,
+  "version": "0.5.0",
+  "scripts": {
+    "check": "node --check app.js"
+  }
+}

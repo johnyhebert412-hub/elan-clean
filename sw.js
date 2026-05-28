@@ -1,4 +1,4 @@
-const CACHE_NAME = "elan-clean-v0.12.0";
+const CACHE_NAME = "elan-clean-v0.12.1";
 const FILES = [
   "./",
   "./index.html",

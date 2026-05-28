@@ -1,0 +1,165 @@
+<!doctype html>
+<html lang="fr-CA">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <meta name="theme-color" content="#165446">
+    <title>Élan - Coach du quotidien</title>
+    <link rel="manifest" href="manifest.webmanifest">
+    <link rel="icon" href="icons/icon.svg" type="image/svg+xml">
+    <link rel="stylesheet" href="styles.css">
+    <script defer src="app.js"></script>
+  </head>
+  <body>
+    <div class="app-shell">
+      <header class="topbar">
+        <div>
+          <p class="eyebrow">Coach du quotidien</p>
+          <h1>Élan</h1>
+        </div>
+        <div class="win-pill" aria-label="Actions faites aujourd'hui">
+          <strong id="wins-count">0</strong>
+          <span>faits</span>
+        </div>
+      </header>
+
+      <main>
+        <section id="view-home" class="view active" aria-labelledby="home-title">
+          <article class="hero">
+            <p class="step">Commence ici</p>
+            <h2 id="home-title">Que veux-tu soutenir aujourd'hui?</h2>
+            <div class="category-grid home-grid">
+              <button class="category-button" data-choose-domain="work">Travail</button>
+              <button class="category-button" data-choose-domain="finance">Finance</button>
+              <button class="category-button" data-choose-domain="house">Maison</button>
+              <button class="category-button" data-choose-domain="health">Santé</button>
+            </div>
+          </article>
+
+          <article class="card next-card">
+            <p class="step">Prochaine petite etape</p>
+            <h2 id="next-title">Choisis un domaine</h2>
+            <p id="next-text" class="muted">Une action claire apparaitra ici.</p>
+            <button id="next-action" class="primary hidden">Faire cette action</button>
+          </article>
+        </section>
+
+        <section id="view-domains" class="view" aria-labelledby="domains-title">
+          <div class="section-heading">
+            <p class="step">Domaines</p>
+            <h2 id="domains-title">Choisis ton besoin</h2>
+          </div>
+          <div class="category-grid">
+            <button class="domain-tile" data-open-domain="work"><strong>Travail</strong><span>Organiser ton shift</span></button>
+            <button class="domain-tile" data-open-domain="finance"><strong>Finance</strong><span>Une action concrete</span></button>
+            <button class="domain-tile" data-open-domain="house"><strong>Maison</strong><span>Avancer sans t'epuiser</span></button>
+            <button class="domain-tile" data-open-domain="health"><strong>Santé</strong><span>Prendre soin de toi</span></button>
+          </div>
+
+          <article id="domain-work" class="card domain-panel hidden">
+            <div class="card-header">
+              <h2>Travail</h2>
+              <button class="text-button" data-close-domain>Changer</button>
+            </div>
+            <form id="work-form" class="form-stack">
+              <label>Début du travail
+                <input id="work-start" type="time" required>
+              </label>
+              <label>Fin du travail
+                <input id="work-end" type="time" required>
+              </label>
+              <label>Pauses prévues
+                <select id="work-breaks">
+                  <option value="none">À déterminer</option>
+                  <option value="one">1 pause</option>
+                  <option value="two">2 pauses</option>
+                  <option value="meal">Pause repas + courte pause</option>
+                </select>
+              </label>
+              <label class="switch-line">
+                <input id="work-dnd" type="checkbox">
+                <span>Ne pas déranger pendant le focus</span>
+              </label>
+              <button class="primary" type="submit">Enregistrer mon horaire</button>
+            </form>
+            <p id="work-summary" class="status-box hidden"></p>
+            <button id="work-help" class="secondary wide">J'ai besoin d'aide maintenant</button>
+            <div id="work-help-box" class="help-box hidden" aria-live="polite"></div>
+          </article>
+
+          <article id="domain-finance" class="card domain-panel hidden">
+            <div class="card-header"><h2>Finance</h2><button class="text-button" data-close-domain>Changer</button></div>
+            <p class="muted">Choisis une action utile.</p>
+            <div class="task-list">
+              <button data-complete="Vérifier mon solde">Vérifier mon solde</button>
+              <button data-complete="Payer une facture">Payer une facture</button>
+              <button data-complete="Revoir un abonnement">Revoir un abonnement</button>
+            </div>
+          </article>
+
+          <article id="domain-house" class="card domain-panel hidden">
+            <div class="card-header"><h2>Maison</h2><button class="text-button" data-close-domain>Changer</button></div>
+            <p class="muted">Une petite avance reelle.</p>
+            <div class="task-list">
+              <button data-complete="Ramasser 3 objets">Ramasser 3 objets</button>
+              <button data-complete="Nettoyer un comptoir">Nettoyer un comptoir</button>
+              <button data-complete="Vider une poubelle">Vider une poubelle</button>
+            </div>
+          </article>
+
+          <article id="domain-health" class="card domain-panel hidden">
+            <div class="card-header"><h2>Santé</h2><button class="text-button" data-close-domain>Changer</button></div>
+            <p class="muted">Reviens a l'essentiel.</p>
+            <div class="task-list">
+              <button data-complete="Boire de l'eau">Boire de l'eau</button>
+              <button data-complete="Vérifier mon énergie">Vérifier mon énergie</button>
+              <button data-complete="Préparer mon sommeil">Préparer mon sommeil</button>
+            </div>
+          </article>
+        </section>
+
+        <section id="view-settings" class="view" aria-labelledby="settings-title">
+          <div class="section-heading">
+            <p class="step">Paramètres</p>
+            <h2 id="settings-title">Réglages simples</h2>
+          </div>
+          <article class="card">
+            <h2>Notifications</h2>
+            <p id="notification-status" class="status-box">Notifications non vérifiées.</p>
+            <label class="switch-line">
+              <input id="notify-important" type="checkbox">
+              <span>Rappels importants</span>
+            </label>
+            <label class="switch-line">
+              <input id="notify-summary" type="checkbox">
+              <span>Résumé quotidien</span>
+            </label>
+            <div class="button-row">
+              <button id="enable-notifications" class="primary">Autoriser</button>
+              <button id="test-notification" class="secondary">Tester</button>
+            </div>
+            <p class="small-muted">Sur Android, les notifications demandent le site installé ou ouvert en HTTPS.</p>
+          </article>
+
+          <article class="card version-card">
+            <h2>À propos</h2>
+            <p><strong>Version : v0.5.0</strong></p>
+            <p class="muted">Mise à jour : 2026-05-26</p>
+            <p class="small-muted">Nouvelle base propre pour Vercel et Android.</p>
+          </article>
+
+          <article class="card">
+            <button id="reset-data" class="danger-button">Effacer mes données locales</button>
+          </article>
+        </section>
+      </main>
+
+      <nav class="bottom-nav" aria-label="Navigation principale">
+        <button class="active" data-view-button="home">Accueil</button>
+        <button data-view-button="domains">Domaines</button>
+        <button data-view-button="settings">Paramètres</button>
+      </nav>
+    </div>
+    <div id="toast" class="toast hidden" role="status" aria-live="polite"></div>
+  </body>
+</html>

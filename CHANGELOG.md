@@ -1,5 +1,9 @@
 # Historique Élan
 
+## v0.12.1 - 2026-05-27
+
+- Domaine Travail retire
+
 ## v0.12.0 - 2026-05-27
 
 - Agenda mensuel style ELAN

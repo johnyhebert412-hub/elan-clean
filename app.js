@@ -3,7 +3,6 @@
 
   const STORAGE_KEY = "elan-clean-v0.5.0";
   const suggestedActions = {
-    work: { title: "Préparer ton travail", text: "Configure ton horaire pour garder le focus plus calme.", action: "open-work" },
     off: { title: "Choisir un petit départ", text: "Garde la journée légère avec une action simple.", action: "complete" },
     finance: { title: "Vérifier ton solde", text: "Ouvre ton compte et regarde le montant disponible.", action: "complete" },
     house: { title: "Faire la vaisselle", text: "Un geste simple pour remettre l'espace en ordre.", action: "complete" },
@@ -14,7 +13,6 @@
     couple: { title: "Envoyer un message gentil", text: "Un petit signe de connexion suffit.", action: "complete" }
   };
   const domainInfo = {
-    work: { total: 3, reward: "Pause calme" },
     off: { total: 3, reward: "Temps relax" },
     finance: { total: 4, reward: "Podcast" },
     house: { total: 3, reward: "Musique" },
@@ -47,7 +45,6 @@
   };
 
   const homeDomains = {
-    work: { title: "Travail", subtitle: "Organisation du shift, pauses, moins de stress.", missions: [{ label: "Organiser le shift", action: "open-domain" }, { label: "Choisir une priorité" }, { label: "Prévoir une pause" }, { label: "Écrire la prochaine tâche" }, { label: "Préparer ton espace" }, { label: "Noter ton énergie" }] },
     off: { title: "Congé", subtitle: "Journée plus légère, sans pression.", missions: [{ label: "Choisir une petite chose" }, { label: "Préparer un coin calme" }, { label: "Faire 5 minutes utiles" }, { label: "Sortir prendre l'air" }, { label: "Ranger un petit espace" }, { label: "Planifier un moment relax" }] },
     house: { title: "Maison", subtitle: "Petits gestes pour avancer à la maison.", missions: [{ label: "Faire la vaisselle" }, { label: "Ranger une surface" }, { label: "Lancer une brassée" }, { label: "Ranger une pièce" }, { label: "Vider une poubelle" }, { label: "Essuyer un comptoir" }, { label: "Plier quelques vêtements" }, { label: "Nettoyer un coin rapide" }] },
     finance: { title: "Finances", subtitle: "Budget simple, anti impulsivité.", missions: [{ label: "Vérifier le solde" }, { label: "Attendre avant un achat" }, { label: "Payer une facture" }, { label: "Noter une dépense" }, { label: "Annuler un abonnement inutile" }, { label: "Mettre un petit montant de côté" }] },
@@ -86,7 +83,6 @@
     quickItems: [],
     agenda: [],
     agendaDate: "",
-    work: { start: "", end: "", breaks: "none", energy: "steady", doNotDisturb: false, softReminders: false },
     notifications: { important: false, summary: false }
   };
 
@@ -111,7 +107,6 @@
         agenda: Array.isArray(saved.agenda) ? saved.agenda : [],
         agendaDate: typeof saved.agendaDate === "string" ? saved.agendaDate : "",
         coins: Number.isFinite(saved.coins) ? saved.coins : (Number.isFinite(saved.wins) ? saved.wins * COINS_PER_TASK : 0),
-        work: { ...defaultState.work, ...saved.work },
         notifications: { ...defaultState.notifications, ...saved.notifications }
       };
       if (nextState.selectedDomain && !suggestedActions[nextState.selectedDomain]) {
@@ -802,36 +797,6 @@
     showToast("Récompense ajoutée à la boutique.");
   }
 
-  function renderWork() {
-    $("work-start").value = state.work.start;
-    $("work-end").value = state.work.end;
-    $("work-breaks").value = state.work.breaks;
-    $("work-energy").value = state.work.energy;
-    $("work-dnd").checked = state.work.doNotDisturb;
-    $("work-soft-reminders").checked = state.work.softReminders;
-
-    const summary = $("work-summary");
-    if (!state.work.start || !state.work.end) {
-      summary.classList.add("hidden");
-      return;
-    }
-    const pauseLabel = {
-      none: "pauses à déterminer",
-      one: "1 pause",
-      two: "2 pauses",
-      meal: "pause repas et courte pause"
-    }[state.work.breaks];
-    const energyLabel = {
-      low: "basse",
-      steady: "correcte",
-      high: "élevée"
-    }[state.work.energy];
-    const focus = state.work.doNotDisturb ? "Ne pas déranger actif." : "Alertes normales.";
-    const reminders = state.work.softReminders ? "Rappels doux actifs." : "Sans rappel automatique.";
-    summary.textContent = `${state.work.start} à ${state.work.end} - ${pauseLabel}. Énergie ${energyLabel}. ${focus} ${reminders}`;
-    summary.classList.remove("hidden");
-  }
-
   function notificationPermissionText() {
     if (!("Notification" in window)) return "Notifications non disponibles dans ce navigateur.";
     if (Notification.permission === "granted") return "Notifications activées.";
@@ -1098,33 +1063,6 @@
       if (event.key === "Enter") saveShopReward();
     });
 
-    $("work-form").addEventListener("submit", (event) => {
-      event.preventDefault();
-      state.work = {
-        start: $("work-start").value,
-        end: $("work-end").value,
-        breaks: $("work-breaks").value,
-        energy: $("work-energy").value,
-        doNotDisturb: $("work-dnd").checked,
-        softReminders: $("work-soft-reminders").checked
-      };
-      saveState();
-      renderWork();
-      showToast("Horaire enregistré.");
-    });
-
-    $("work-help").addEventListener("click", () => {
-      const box = $("work-help-box");
-      if (state.work.energy === "low") {
-        box.textContent = "Ton énergie est basse. Choisis une action essentielle, puis prévois une pause.";
-      } else {
-        box.textContent = state.work.doNotDisturb
-          ? "Prends 60 secondes. Choisis une seule priorité, puis reprends sans notification."
-          : "Bloque une seule petite étape. Commence doucement, sans chercher la perfection.";
-      }
-      box.classList.remove("hidden");
-    });
-
     $("notify-important").addEventListener("change", (event) => {
       state.notifications.important = event.target.checked;
       saveState();
@@ -1171,7 +1109,6 @@
     renderRewards();
     renderShop();
     renderSelectedDomain();
-    renderWork();
     renderDomainProgress();
     renderSettings();
     renderOnboarding();

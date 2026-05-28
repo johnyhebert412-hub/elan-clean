@@ -1,10 +1,10 @@
-# Élan v0.12.1 - version propre
+# Élan v0.5.0 - version propre
 
 Application mobile simple en HTML, CSS et JavaScript. Aucun framework et aucun build obligatoire.
 
 ## Tester sur l'ordinateur
 
-Lancer `npm run dev`, puis ouvrir l'adresse indiquée dans le terminal.
+Ouvrir `index.html`. Les boutons et la sauvegarde locale fonctionnent directement.
 
 Les notifications et l'installation Android fonctionnent après publication en HTTPS, par exemple sur Vercel.
 
@@ -18,8 +18,6 @@ Les notifications et l'installation Android fonctionnent après publication en H
 
 Vercel sert directement `index.html`, `styles.css` et `app.js`.
 
-La commande `npm run build` valide les scripts avant la publication, sans transformer l'application.
-
 ## Fichiers importants
 
 - `index.html` : structure de l'interface seulement.
@@ -30,6 +28,6 @@ La commande `npm run build` valide les scripts avant la publication, sans transf
 
 ## Version
 
-- Version : v0.12.1
-- Date : 2026-05-27
-- Changement : Domaine Travail retire
+- Version : v0.5.0
+- Date : 2026-05-26
+- Changement : reconstruction propre et minimale pour test Android et Vercel.

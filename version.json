@@ -1,10 +1,17 @@
 {
-  "version": "v0.12.0",
+  "version": "v0.12.1",
   "updated": "2026-05-27",
   "changes": [
-    "Agenda mensuel style ELAN"
+    "Domaine Travail retire"
   ],
   "history": [
+    {
+      "version": "v0.12.1",
+      "date": "2026-05-27",
+      "changes": [
+        "Domaine Travail retire"
+      ]
+    },
     {
       "version": "v0.12.0",
       "date": "2026-05-27",
