@@ -1,27 +1,24 @@
 $ErrorActionPreference = "Stop"
 
-$root = Split-Path -Parent $PSScriptRoot
-$release = Get-Content -Raw -Encoding UTF8 -LiteralPath (Join-Path $root "version.json") | ConvertFrom-Json
-$zip = Join-Path $root ("Elan-GitHub-Vercel-{0}.zip" -f $release.version)
+$project = Split-Path -Parent $PSScriptRoot
+$parent = Split-Path -Parent $project
+$release = Get-Content -Raw -Encoding UTF8 -LiteralPath (Join-Path $project "version.json") | ConvertFrom-Json
+$zip = Join-Path $parent ("Elan-{0}-stable.zip" -f $release.version)
 $source = @(
-  "index.html",
-  "styles.css",
-  "app.js",
-  "logic.js",
-  "logic.test.js",
-  "version.json",
-  "CHANGELOG.md",
-  "AGENTS.md",
-  "manifest.webmanifest",
-  "sw.js",
-  "package.json",
-  "vercel.json",
-  "README.md",
   ".gitignore",
-  ".vercelignore",
-  "scripts",
-  "icons"
-) | ForEach-Object { Join-Path $root $_ }
+  "app.js",
+  "CHANGELOG.md",
+  "index.html",
+  "manifest.webmanifest",
+  "package.json",
+  "README.md",
+  "styles.css",
+  "sw.js",
+  "vercel.json",
+  "version.json",
+  "icons",
+  "scripts"
+) | ForEach-Object { Join-Path $project $_ }
 
 if (Test-Path -LiteralPath $zip) {
   Remove-Item -LiteralPath $zip

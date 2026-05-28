@@ -1,74 +1,77 @@
 import { readFile, writeFile } from "node:fs/promises";
-import { fileURLToPath } from "node:url";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-const kind = process.argv[2] || "patch";
-const summary = process.argv.slice(3).join(" ").trim();
-const allowedKinds = new Set(["patch", "minor", "major"]);
-
-if (!allowedKinds.has(kind) || !summary) {
-  console.error("Usage: npm run release:patch -- \"Résumé de la modification\"");
-  process.exit(1);
+const update = process.argv[2] || "patch";
+const summary = process.argv.slice(3).join(" ").trim() || "Mise à jour de l'application.";
+if (!["patch", "minor", "major"].includes(update)) {
+  throw new Error("Utiliser : patch, minor ou major.");
 }
 
-const versionPath = path.join(root, "version.json");
-const swPath = path.join(root, "sw.js");
-const changelogPath = path.join(root, "CHANGELOG.md");
-const indexPath = path.join(root, "index.html");
-const release = JSON.parse(await readFile(versionPath, "utf8"));
-const numbers = release.version.replace(/^v/, "").split(".").map(Number);
-
-if (kind === "major") {
-  numbers[0] += 1;
-  numbers[1] = 0;
-  numbers[2] = 0;
-} else if (kind === "minor") {
-  numbers[1] += 1;
-  numbers[2] = 0;
+const packagePath = path.join(root, "package.json");
+const packageData = JSON.parse(await readFile(packagePath, "utf8"));
+const parts = packageData.version.split(".").map(Number);
+if (update === "major") {
+  parts[0] += 1;
+  parts[1] = 0;
+  parts[2] = 0;
+} else if (update === "minor") {
+  parts[1] += 1;
+  parts[2] = 0;
 } else {
-  numbers[2] += 1;
+  parts[2] += 1;
 }
+const version = parts.join(".");
+const date = new Intl.DateTimeFormat("en-CA", {
+  timeZone: "America/Toronto"
+}).format(new Date());
+const versionLabel = `v${version}`;
 
-const version = `v${numbers.join(".")}`;
-const updated = new Intl.DateTimeFormat("en-CA", { timeZone: "America/Toronto" }).format(new Date());
-const historyEntry = { version, date: updated, changes: [summary] };
-const nextRelease = {
-  version,
-  updated,
+packageData.version = version;
+await writeFile(packagePath, `${JSON.stringify(packageData, null, 2)}\n`);
+
+const releasePath = path.join(root, "version.json");
+const previousRelease = JSON.parse(await readFile(releasePath, "utf8"));
+const release = {
+  version: versionLabel,
+  updated: date,
   changes: [summary],
-  history: [historyEntry, ...(release.history || [])]
+  history: [
+    { version: versionLabel, date, changes: [summary] },
+    ...previousRelease.history
+  ]
 };
+await writeFile(releasePath, `${JSON.stringify(release, null, 2)}\n`);
 
-await writeFile(versionPath, `${JSON.stringify(nextRelease, null, 2)}\n`, "utf8");
-
-const changelog = [
-  "# Historique Elan",
-  "",
-  ...nextRelease.history.flatMap(entry => [
-    `## ${entry.version} - ${entry.date}`,
-    "",
-    ...entry.changes.map(change => `- ${change}`),
-    ""
-  ])
-].join("\n");
-await writeFile(changelogPath, `${changelog}\n`, "utf8");
-
-const serviceWorker = await readFile(swPath, "utf8");
-const updatedWorker = serviceWorker.replace(
-  /const CACHE = "elan-pilote-[^"]+";/,
-  `const CACHE = "elan-pilote-${version}";`
+const indexPath = path.join(root, "index.html");
+let index = await readFile(indexPath, "utf8");
+index = index.replace(/Version : v[\d.]+/, `Version : ${versionLabel}`);
+index = index.replace(/Dernière mise à jour : \d{4}-\d{2}-\d{2}/, `Dernière mise à jour : ${date}`);
+index = index.replace(
+  /<ul id="app-changes" class="version-changes">[\s\S]*?<\/ul>/,
+  `<ul id="app-changes" class="version-changes">\n              <li>${summary}</li>\n            </ul>`
 );
-await writeFile(swPath, updatedWorker, "utf8");
+await writeFile(indexPath, index);
 
-const index = await readFile(indexPath, "utf8");
-const updatedIndex = index
-  .replace(/Version : v[\d.]+/, `Version : ${version}`)
-  .replace(/Dernière mise à jour : \d{4}-\d{2}-\d{2}/, `Dernière mise à jour : ${updated}`)
-  .replace(
-    /<ul id="app-changes" class="version-changes">[\s\S]*?<\/ul>/,
-    `<ul id="app-changes" class="version-changes">\n              <li>${summary}</li>\n            </ul>`
-  );
-await writeFile(indexPath, updatedIndex, "utf8");
+const swPath = path.join(root, "sw.js");
+let sw = await readFile(swPath, "utf8");
+sw = sw.replace(/elan-clean-v[\d.]+(?:-[a-z]+)?/, `elan-clean-v${version}`);
+await writeFile(swPath, sw);
 
-console.log(`Elan ${version} - ${updated}`);
+const readmePath = path.join(root, "README.md");
+let readme = await readFile(readmePath, "utf8");
+readme = readme.replace(/^# Élan v[\d.]+/m, `# Élan ${versionLabel}`);
+readme = readme.replace(/- Version : v[\d.]+/, `- Version : ${versionLabel}`);
+readme = readme.replace(/- Date : \d{4}-\d{2}-\d{2}/, `- Date : ${date}`);
+readme = readme.replace(/- Changement : .*/, `- Changement : ${summary}`);
+await writeFile(readmePath, readme);
+
+const changelogPath = path.join(root, "CHANGELOG.md");
+const changelog = await readFile(changelogPath, "utf8");
+await writeFile(
+  changelogPath,
+  `# Historique Élan\n\n## ${versionLabel} - ${date}\n\n- ${summary}\n\n${changelog.replace(/^# Historique Élan\s*/u, "")}`
+);
+
+console.log(`Élan ${versionLabel} - ${date}`);

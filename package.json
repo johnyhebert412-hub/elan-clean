@@ -1,10 +1,11 @@
 {
-  "name": "elan-pilote",
+  "name": "elan-propre-mobile",
   "private": true,
-  "type": "module",
+  "version": "0.12.1",
   "scripts": {
     "build": "node scripts/build.mjs",
-    "test": "node --test",
+    "dev": "node scripts/dev.mjs",
+    "check": "node --check app.js",
     "release:patch": "node scripts/version.mjs patch",
     "release:minor": "node scripts/version.mjs minor",
     "release:major": "node scripts/version.mjs major",
