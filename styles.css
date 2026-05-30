@@ -613,6 +613,27 @@ input[type="date"], input[type="time"], input[type="text"], select {
   font-size: 2rem;
 }
 
+.active-reward-card {
+  background: linear-gradient(135deg, #d8ede4, #eef7f2);
+  border: 2px solid var(--brand-light);
+  text-align: center;
+}
+
+.active-reward-card h2 {
+  color: var(--brand);
+  font-size: 1.4rem;
+  margin: 4px 0;
+}
+
+.active-reward-time {
+  color: var(--brand);
+  font-size: 3.2rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  line-height: 1;
+  margin: 10px 0 16px;
+}
+
 .shop-list {
   display: flex;
   flex-direction: column;

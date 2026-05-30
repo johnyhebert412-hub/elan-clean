@@ -265,9 +265,24 @@
             <p class="small-muted">Aucune dépense réelle. Tes pièces servent seulement à débloquer des pauses.</p>
           </article>
 
+          <!-- Panel récompense active -->
+          <article id="active-reward-panel" class="card active-reward-card hidden">
+            <p class="step">En cours</p>
+            <h2 id="active-reward-name">—</h2>
+            <p id="active-reward-time" class="active-reward-time">00:00</p>
+            <button id="stop-active-reward" class="secondary wide" type="button">Arrêter la récompense</button>
+          </article>
+
+          <!-- Mes récompenses achetées -->
+          <article id="purchased-rewards-section" class="card hidden">
+            <h2>Mes récompenses</h2>
+            <p class="small-muted">Prêtes à utiliser quand tu veux.</p>
+            <div id="purchased-rewards-list" class="shop-list"></div>
+          </article>
+
           <article class="card">
-            <h2>Récompenses</h2>
-            <p class="small-muted">Choisis une récompense saine quand tu as avancé.</p>
+            <h2>Récompenses disponibles</h2>
+            <p class="small-muted">Achète une récompense et utilise-la quand tu es prêt.</p>
             <div id="shop-rewards" class="shop-list"></div>
           </article>
 
