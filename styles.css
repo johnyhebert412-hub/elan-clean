@@ -961,8 +961,8 @@ textarea {
 }
 
 .checkin-button::before {
-  content: "✓";
-  font-size: 1.15rem;
+  content: "📋";
+  font-size: 1.1rem;
   line-height: 1;
 }
 
@@ -986,6 +986,44 @@ textarea {
 
 .checkin-card h2 {
   margin-bottom: 0;
+}
+
+.history-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-height: 260px;
+  overflow-y: auto;
+}
+
+.history-item {
+  align-items: center;
+  background: var(--soft);
+  border-radius: 12px;
+  display: flex;
+  gap: 8px;
+  justify-content: space-between;
+  padding: 10px 12px;
+}
+
+.history-item-label {
+  color: var(--ink);
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.history-item-meta {
+  color: var(--muted);
+  font-size: 0.78rem;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.history-empty {
+  color: var(--muted);
+  font-size: 0.88rem;
+  padding: 12px 0;
+  text-align: center;
 }
 
 .checkin-choice-grid {

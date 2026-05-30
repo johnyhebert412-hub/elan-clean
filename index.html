@@ -373,24 +373,17 @@
         <button class="settings-nav-button" data-view-button="settings" aria-label="Paramètres">⚙️</button>
       </nav>
     </div>
-    <button id="checkin-button" class="checkin-button" type="button" aria-controls="checkin-panel" aria-expanded="false">Check-in</button>
+    <button id="checkin-button" class="checkin-button" type="button" aria-controls="checkin-panel" aria-expanded="false" aria-label="Historique des victoires">Historique</button>
     <section id="checkin-panel" class="checkin-panel hidden" aria-live="polite">
       <article class="checkin-card">
         <div class="card-header">
           <div>
-            <p class="step">Maintenant</p>
-            <h2>Check-in rapide</h2>
+            <p class="step">Mes victoires</p>
+            <h2>Historique</h2>
           </div>
           <button id="close-checkin" class="text-button" type="button">Fermer</button>
         </div>
-        <div id="checkin-choices" class="checkin-choice-grid" role="group" aria-label="État actuel"></div>
-        <p class="small-muted checkin-label">Énergie</p>
-        <div id="checkin-energy" class="checkin-energy-row" role="group" aria-label="Énergie"></div>
-        <label class="quick-input-label">
-          Note optionnelle
-          <input id="checkin-note" type="text" maxlength="90" placeholder="Ex.: besoin de pause">
-        </label>
-        <button id="save-checkin" class="primary wide" type="button">Valider</button>
+        <div id="history-list" class="history-list"></div>
       </article>
     </section>
     <section id="goal-selection-dock" class="goal-selection-dock hidden" aria-live="polite">

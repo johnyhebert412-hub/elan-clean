@@ -100,6 +100,7 @@
     activeChallenge: null,
     purchasedRewards: [],
     activeReward: null,
+    history: [],
     notifications: { important: false, summary: false }
   };
 
@@ -146,6 +147,7 @@
         coins: Number.isFinite(saved.coins) ? saved.coins : (Number.isFinite(saved.wins) ? saved.wins * COINS_PER_TASK : 0),
         purchasedRewards: Array.isArray(saved.purchasedRewards) ? saved.purchasedRewards : [],
         activeReward: (saved.activeReward && typeof saved.activeReward === "object") ? saved.activeReward : null,
+        history: Array.isArray(saved.history) ? saved.history : [],
         notifications: { ...defaultState.notifications, ...saved.notifications }
       };
       if (nextState.selectedDomain && !suggestedActions[nextState.selectedDomain]) {
@@ -736,6 +738,9 @@
     if (domainInfo[domain]) {
       state.progress[domain] = (state.progress[domain] || 0) + 1;
     }
+    // Enregistrer dans l'historique (max 50 entrées)
+    const entry = { label: label, coins: COINS_PER_TASK, at: Date.now(), domain: domain || "" };
+    state.history = [entry, ...state.history].slice(0, 50);
     saveState();
     renderDomainProgress();
     renderShop();
@@ -787,10 +792,40 @@
     const panel = $("checkin-panel");
     const button = $("checkin-button");
     if (!panel || !button) return;
+    renderHistoryList();
     panel.classList.remove("hidden");
     button.setAttribute("aria-expanded", "true");
-    renderCheckInChoices();
-    $("checkin-note")?.focus();
+  }
+
+  function renderHistoryList() {
+    const list = $("history-list");
+    if (!list) return;
+    if (!state.history || !state.history.length) {
+      list.replaceChildren();
+      const empty = document.createElement("p");
+      empty.className = "small-muted";
+      empty.textContent = "Aucune victoire encore. Complète une action pour commencer !";
+      list.append(empty);
+      return;
+    }
+    const now = new Date();
+    const todayStr = now.toLocaleDateString("fr-CA");
+    list.replaceChildren(...state.history.slice(0, 30).map(function(entry) {
+      const row = document.createElement("div");
+      row.className = "history-item";
+      const d = new Date(entry.at);
+      const dayStr = d.toLocaleDateString("fr-CA");
+      const timeStr = d.toLocaleTimeString("fr-CA", { hour: "2-digit", minute: "2-digit" });
+      const dayLabel = dayStr === todayStr ? "aujourd'hui" : "hier";
+      const label = document.createElement("span");
+      label.className = "history-item-label";
+      label.textContent = entry.label;
+      const meta = document.createElement("span");
+      meta.className = "history-item-meta";
+      meta.textContent = `+${entry.coins} pièces · ${dayLabel} ${timeStr}`;
+      row.append(label, meta);
+      return row;
+    }));
   }
 
   function closeCheckIn() {
