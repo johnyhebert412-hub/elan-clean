@@ -1344,7 +1344,11 @@
   function renderShop() {
     const list = $("shop-rewards");
     if (!list) return;
-    $("coin-balance").textContent = `${state.coins} pièce${state.coins > 1 ? "s" : ""}`;
+    const coinText = `🪙 ${state.coins}`;
+    const coinEl = $("coin-balance");
+    if (coinEl) coinEl.textContent = `${state.coins} pièce${state.coins > 1 ? "s" : ""}`;
+    const headerBadge = $("header-coin-balance");
+    if (headerBadge) headerBadge.textContent = coinText;
 
     // Panel récompense active
     const panel = $("active-reward-panel");

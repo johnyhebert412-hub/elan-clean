@@ -78,8 +78,10 @@ p { line-height: 1.4; }
 .calm-badge {
   align-items: center;
   background: var(--soft);
+  border: none;
   border-radius: 18px;
   color: var(--brand);
+  cursor: pointer;
   display: flex;
   font-size: .82rem;
   font-weight: 700;
